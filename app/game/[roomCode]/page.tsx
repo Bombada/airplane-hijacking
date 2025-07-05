@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useGameState } from '@/lib/hooks/useGameState';
+import { useGameStateWS } from '@/lib/hooks/useGameStateWS';
 import PlayerList from './components/PlayerList';
 import GameBoard from './components/GameBoard';
 import AirplaneSelection from './components/AirplaneSelection';
@@ -19,8 +19,8 @@ export default function GameRoomPage() {
   const [username, setUsername] = useState<string>('');
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // 실시간 게임 상태
-  const { gameState, loading, error, isConnected, refetch } = useGameState(roomCode, userId);
+  // 실시간 게임 상태 (WebSocket)
+  const { gameState, loading, error, isConnected, sendAction, refetch } = useGameStateWS(roomCode, userId);
 
   useEffect(() => {
     // 로컬 스토리지에서 사용자 정보 가져오기
@@ -37,35 +37,11 @@ export default function GameRoomPage() {
     setIsInitialized(true);
   }, [router]);
 
-  // 플레이어 액션 처리
-  const handlePlayerAction = async (actionType: string, data?: any) => {
+  // 플레이어 액션 처리 (WebSocket)
+  const handlePlayerAction = (actionType: string, airplaneId?: string, cardId?: string) => {
     if (!userId) return;
-
-    try {
-      const response = await fetch(`/api/game/${roomCode}/actions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId,
-          actionType,
-          ...data
-        }),
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        // 성공 시 게임 상태 새로고침
-        await refetch();
-      } else {
-        alert(result.error || '액션 처리에 실패했습니다.');
-      }
-    } catch (error) {
-      console.error('Player action error:', error);
-      alert('액션 처리 중 오류가 발생했습니다.');
-    }
+    console.log(`[GamePage] WebSocket action: ${actionType}`);
+    sendAction(actionType, airplaneId, cardId);
   };
 
   // 게임 시작
@@ -84,16 +60,15 @@ export default function GameRoomPage() {
         }),
       });
 
-      const result = await response.json();
-
       if (response.ok) {
-        await refetch();
+        // WebSocket으로 게임 시작 알림
+        setTimeout(() => refetch(), 500);
       } else {
-        alert(result.error || '게임 시작에 실패했습니다.');
+        const result = await response.json();
+        console.error('Start game failed:', result.error);
       }
     } catch (error) {
       console.error('Start game error:', error);
-      alert('게임 시작 중 오류가 발생했습니다.');
     }
   };
 
@@ -172,7 +147,7 @@ export default function GameRoomPage() {
             airplanes={gameState.airplanes || []}
             players={gameState.players}
             allPlayerActions={gameState.allPlayerActions || []}
-            onSelectAirplane={(airplaneId: string) => handlePlayerAction('select_airplane', { airplaneId })}
+            onSelectAirplane={(airplaneId: string) => handlePlayerAction('select_airplane', airplaneId)}
             selectedAirplane={gameState.myActions?.[0]?.airplane_id}
             currentUserId={userId || ''}
           />
@@ -193,7 +168,7 @@ export default function GameRoomPage() {
             cards={gameState.myCards || []}
             players={gameState.players}
             allPlayerActions={gameState.allPlayerActions || []}
-            onSelectCard={(cardId: string) => handlePlayerAction('select_card', { cardId })}
+            onSelectCard={(cardId: string) => handlePlayerAction('select_card', undefined, cardId)}
             selectedCard={gameState.myActions?.[0]?.selected_card_id}
             currentUserId={userId || ''}
           />

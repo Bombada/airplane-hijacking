@@ -183,7 +183,12 @@ export async function POST(
           if (memoryGameRoom.current_round > 0) {
             const currentRound = mockGameState.getCurrentRound(memoryGameRoom.id, memoryGameRoom.current_round);
             if (currentRound) {
-              mockGameState.addPlayerAction(player.id, currentRound.id, 'select_airplane', airplaneId);
+              const action = mockGameState.addPlayerAction(player.id, currentRound.id, 'select_airplane', airplaneId);
+              console.log(`[Actions API] Added airplane selection for player ${player.username} (${player.id}) -> airplane ${airplaneId}`);
+              
+              // Log current state
+              const allActions = mockGameState.getAllRoundActions(currentRound.id);
+              console.log(`[Actions API] Total actions in round: ${allActions.length}`);
               
               // Check if all players have selected airplanes and advance phase if needed
               const updatedRoom = mockGameState.checkAndAdvancePhase(roomCode);

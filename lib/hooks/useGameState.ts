@@ -84,7 +84,7 @@ export function useGameState(roomCode: string, userId: string): UseGameStateResu
     // Initial fetch
     fetchGameState();
     
-    // Set up polling every 1 second for better real-time sync
+    // Set up polling every 1 second for better real-time sync during debugging
     intervalRef.current = setInterval(fetchGameState, 1000);
     
     return () => {

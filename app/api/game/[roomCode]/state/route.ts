@@ -105,6 +105,15 @@ export async function GET(
             .eq('game_round_id', currentRound.id);
 
           myActions = actionData;
+          
+          // Get all player actions for this round
+          const { data: allActionData } = await supabaseServer
+            .from('player_actions')
+            .select('*')
+            .eq('game_round_id', currentRound.id);
+            
+          allPlayerActions = allActionData;
+          console.log(`[State API Supabase] Round ${currentRound.id}: Found ${allPlayerActions?.length || 0} total actions`);
         }
       }
 
@@ -116,7 +125,9 @@ export async function GET(
           currentRound,
           airplanes,
           myCards,
-          myActions
+          myActions,
+          allPlayerActions,
+          hasActiveTimer: mockGameState.hasActiveTimer(roomCode)
         }
       });
 
@@ -155,6 +166,12 @@ export async function GET(
           myActions = mockGameState.getPlayerActions(currentPlayer.id, currentRound.id);
           // Get all player actions for this round to show who selected what
           allPlayerActions = mockGameState.getAllRoundActions(currentRound.id);
+          console.log(`[State API] Round ${currentRound.id}: Found ${allPlayerActions.length} total actions`);
+          console.log(`[State API] All actions:`, allPlayerActions.map(a => ({
+            player_id: a.player_id,
+            action_type: a.action_type,
+            airplane_id: a.airplane_id
+          })));
         }
 
         myCards = mockGameState.getPlayerCards(currentPlayer.id);

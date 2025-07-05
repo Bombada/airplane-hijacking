@@ -36,6 +36,20 @@ export default function AirplaneSelection({
   currentUserId
 }: AirplaneSelectionProps) {
   
+  // Debug logging
+  console.log('[AirplaneSelection] Received data:', {
+    airplanes: airplanes?.length,
+    players: players?.length,
+    allPlayerActions: allPlayerActions?.length,
+    actions: allPlayerActions,
+    detailedActions: allPlayerActions?.map(action => ({
+      id: action.id,
+      player_id: action.player_id,
+      action_type: action.action_type,
+      airplane_id: action.airplane_id
+    }))
+  });
+  
   const getAirplaneEmoji = (number: number) => {
     const emojis = ['✈️', '🛩️', '🛫', '🛬'];
     return emojis[number - 1] || '✈️';

@@ -191,6 +191,16 @@ export default function HomePage() {
             <li>• 심리전과 추론으로 승리하세요!</li>
           </ul>
         </div>
+
+        {/* 관리자 링크 */}
+        <div className="mt-4 text-center">
+          <button
+            onClick={() => router.push('/admin')}
+            className="text-sm text-gray-500 hover:text-gray-700 underline"
+          >
+            관리자 페이지
+          </button>
+        </div>
       </div>
     </div>
   );

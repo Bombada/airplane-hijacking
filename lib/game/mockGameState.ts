@@ -185,7 +185,10 @@ class MockGameState {
 
   // Player Actions operations
   addPlayerAction(playerId: string, roundId: string, actionType: string, airplaneId?: string, cardId?: string): MockPlayerAction {
+    console.log(`[MockGameState] Adding action: player=${playerId}, round=${roundId}, type=${actionType}, airplane=${airplaneId}`);
+    
     const roundActions = this.playerActions.get(roundId) || [];
+    console.log(`[MockGameState] Current actions for round ${roundId}:`, roundActions.length);
     
     // Check if player already has an action of this type for this round
     const existingActionIndex = roundActions.findIndex(a => 
@@ -204,14 +207,16 @@ class MockGameState {
     if (existingActionIndex >= 0) {
       // Update existing action
       roundActions[existingActionIndex] = action;
-      console.log(`Updated existing ${actionType} action for player ${playerId}`);
+      console.log(`[MockGameState] Updated existing ${actionType} action for player ${playerId}`);
     } else {
       // Add new action
       roundActions.push(action);
-      console.log(`Added new ${actionType} action for player ${playerId}`);
+      console.log(`[MockGameState] Added new ${actionType} action for player ${playerId}`);
     }
 
     this.playerActions.set(roundId, roundActions);
+    console.log(`[MockGameState] Total actions in round ${roundId} after update:`, roundActions.length);
+    
     return action;
   }
 
@@ -241,7 +246,9 @@ class MockGameState {
 
   // Phase transition methods
   getAllRoundActions(roundId: string): MockPlayerAction[] {
-    return this.playerActions.get(roundId) || [];
+    const actions = this.playerActions.get(roundId) || [];
+    console.log(`[MockGameState] getAllRoundActions for round ${roundId}: ${actions.length} actions found`);
+    return actions;
   }
 
   checkAllPlayersSelectedAirplane(gameRoomId: string, roundId: string): boolean {
