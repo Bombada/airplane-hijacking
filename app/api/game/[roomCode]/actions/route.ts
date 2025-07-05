@@ -87,12 +87,32 @@ export async function POST(
             }, { status: 400 });
           }
 
+          if (!currentRound) {
+            console.error('[Actions API] No current round found for airplane selection:', {
+              gameRoomStatus: gameRoom.status,
+              currentRoundNumber: gameRoom.current_round,
+              gameRoomId: gameRoom.id
+            });
+            return NextResponse.json<ApiResponse<null>>({
+              error: 'No active round found for airplane selection'
+            }, { status: 400 });
+          }
+
           // Select/change airplane
+          console.log(`[Actions API] Attempting to upsert airplane selection:`, {
+            player_id: player.id,
+            game_round_id: currentRound?.id,
+            action_type: 'select_airplane',
+            airplane_id: airplaneId,
+            currentRound: currentRound ? 'exists' : 'null'
+          });
+
           const { error: airplaneError } = await supabaseServer
             .from('player_actions')
             .upsert({
               player_id: player.id,
               game_round_id: currentRound.id,
+              action_type: 'select_airplane',
               airplane_id: airplaneId,
               action_time: new Date().toISOString()
             }, {
@@ -100,11 +120,13 @@ export async function POST(
             });
 
           if (airplaneError) {
+            console.error('[Actions API] Airplane selection error:', airplaneError);
             return NextResponse.json<ApiResponse<null>>({
-              error: 'Failed to select airplane'
+              error: `Failed to select airplane: ${airplaneError.message}`
             }, { status: 500 });
           }
 
+          console.log(`[Actions API] Airplane selection successful for player ${player.id}`);
           return NextResponse.json<ApiResponse<null>>({
             message: 'Airplane selected'
           });

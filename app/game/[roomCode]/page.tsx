@@ -142,13 +142,64 @@ export default function GameRoomPage() {
         );
 
       case 'airplane_selection':
+        // Find the correct current player using userId
+        const actualCurrentPlayer = gameState.players.find(p => p.user_id === userId);
+        
+        // Find the current user's airplane selection directly from allPlayerActions
+        // This is more reliable than using myActions which might have wrong data
+        let selectedAirplane: string | undefined;
+        
+        if (actualCurrentPlayer) {
+          const myAirplaneAction = gameState.allPlayerActions?.find(action => {
+            const actionType = action.action_type || action.actionType;
+            return action.player_id === actualCurrentPlayer.id && 
+                   (actionType === 'select_airplane' || (action.airplane_id && !action.selected_card_id && !actionType));
+          });
+          selectedAirplane = myAirplaneAction?.airplane_id;
+        }
+        
+        // Fallback: try myActions if allPlayerActions didn't work
+        if (!selectedAirplane) {
+          const myActionsFallback = gameState.myActions?.find(action => {
+            const actionType = action.action_type || action.actionType;
+            return actionType === 'select_airplane' || (action.airplane_id && !action.selected_card_id && !actionType);
+          });
+          selectedAirplane = myActionsFallback?.airplane_id;
+        }
+        
+        // Debug logging to understand the data structure
+        console.log('[Page] Airplane selection debugging:', {
+          userId,
+          actualCurrentPlayer,
+          selectedAirplane,
+          playerMismatch: gameState.currentPlayer?.user_id !== userId,
+          myActionsFromMyActions: gameState.myActions?.map(action => ({
+            id: action.id,
+            player_id: action.player_id,
+            action_type: action.action_type,
+            actionType: action.actionType,
+            airplane_id: action.airplane_id,
+            selected_card_id: action.selected_card_id
+          })),
+          myActionsFromAllPlayerActions: gameState.allPlayerActions?.filter(action => 
+            action.player_id === actualCurrentPlayer?.id
+          ).map(action => ({
+            id: action.id,
+            player_id: action.player_id,
+            action_type: action.action_type,
+            actionType: action.actionType,
+            airplane_id: action.airplane_id,
+            selected_card_id: action.selected_card_id
+          }))
+        });
+        
         return (
           <AirplaneSelection
             airplanes={gameState.airplanes || []}
             players={gameState.players}
             allPlayerActions={gameState.allPlayerActions || []}
             onSelectAirplane={(airplaneId: string) => handlePlayerAction('select_airplane', airplaneId)}
-            selectedAirplane={gameState.myActions?.[0]?.airplane_id}
+            selectedAirplane={selectedAirplane}
             currentUserId={userId || ''}
           />
         );
