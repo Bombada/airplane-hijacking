@@ -179,8 +179,38 @@ class MockGameState {
     return cards;
   }
 
+  clearPlayerCards(playerId: string): void {
+    this.playerCards.delete(playerId);
+  }
+
   getPlayerCards(playerId: string): MockPlayerCard[] {
-    return this.playerCards.get(playerId) || [];
+    const allCards = this.playerCards.get(playerId) || [];
+    // Only return unused cards
+    return allCards.filter(card => !card.is_used);
+  }
+
+  // Mark card as used
+  markCardAsUsed(cardId: string): boolean {
+    for (const [playerId, cards] of this.playerCards.entries()) {
+      const card = cards.find(c => c.id === cardId);
+      if (card) {
+        card.is_used = true;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Mark card as unused (for when player changes their selection)
+  markCardAsUnused(cardId: string): boolean {
+    for (const [playerId, cards] of this.playerCards.entries()) {
+      const card = cards.find(c => c.id === cardId);
+      if (card) {
+        card.is_used = false;
+        return true;
+      }
+    }
+    return false;
   }
 
   // Player Actions operations

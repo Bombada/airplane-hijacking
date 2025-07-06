@@ -158,7 +158,35 @@ export async function POST(
             }, { status: 400 });
           }
 
-          // Update the existing action with card selection (allow changing card selection)
+          // Check if the card belongs to the player and is not already used
+          const { data: selectedCard, error: cardCheckError } = await supabaseServer
+            .from('player_cards')
+            .select('*')
+            .eq('id', cardId)
+            .eq('player_id', player.id)
+            .eq('is_used', false)
+            .single();
+
+          console.log(`[Actions API Debug] Card selection attempt:`, {
+            cardId,
+            playerId: player.id,
+            playerUsername: player.username,
+            selectedCard: selectedCard ? {
+              id: selectedCard.id,
+              card_type: selectedCard.card_type,
+              is_used: selectedCard.is_used
+            } : null,
+            cardCheckError: cardCheckError?.message || 'none'
+          });
+
+          if (cardCheckError || !selectedCard) {
+            return NextResponse.json<ApiResponse<null>>({
+              error: 'Card not found or already used'
+            }, { status: 400 });
+          }
+
+          // Update the existing action with card selection
+          // Note: We don't mark the card as used here, only during results calculation
           const { error: cardError } = await supabaseServer
             .from('player_actions')
             .update({
@@ -175,11 +203,8 @@ export async function POST(
             }, { status: 500 });
           }
 
-          // NOTE: Don't mark card as used yet - wait until round ends
-          // This allows players to see their cards during the round
-          
           return NextResponse.json<ApiResponse<null>>({
-            message: 'Card selected'
+            message: 'Card selected (will be marked as used during results calculation)'
           });
 
         default:
@@ -252,6 +277,18 @@ export async function POST(
           if (memoryGameRoom.current_round > 0) {
             const currentRound = mockGameState.getCurrentRound(memoryGameRoom.id, memoryGameRoom.current_round);
             if (currentRound) {
+              // Check if the card belongs to the player (basic validation)
+              const playerCards = mockGameState.getPlayerCards(player.id);
+              const cardExists = playerCards.some(card => card.id === cardId);
+              
+              if (!cardExists) {
+                return NextResponse.json<ApiResponse<null>>({
+                  error: 'Card not found or already used'
+                }, { status: 400 });
+              }
+
+              // Just update the action without marking card as used
+              // Card will be marked as used during results calculation
               mockGameState.addPlayerAction(player.id, currentRound.id, 'select_card', undefined, cardId);
               
               // Check if all players have selected cards and advance phase if needed
@@ -263,7 +300,7 @@ export async function POST(
           }
 
           return NextResponse.json<ApiResponse<null>>({
-            message: 'Card selected (memory mode)'
+            message: 'Card selected (will be marked as used during results calculation - memory mode)'
           });
 
         default:

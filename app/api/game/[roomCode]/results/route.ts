@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabase/server';
 import { calculateRoundScore, applyHijackerEffect, isGameFinished } from '@/lib/game/gameLogic';
 import { ApiResponse } from '@/types/database';
+import mockGameState from '@/lib/game/mockGameState';
 
 export async function POST(
   request: NextRequest,
@@ -220,6 +221,24 @@ export async function POST(
       // Only update player scores if new records were successfully created
       console.log(`[Results API] New round results created, updating player scores for round ${currentRound.round_number}`);
       
+      // Mark used cards as used (NOW that results are finalized)
+      const usedCardIds = playerActions
+        .filter((action: any) => action.selected_card_id)
+        .map((action: any) => action.selected_card_id);
+      
+      if (usedCardIds.length > 0) {
+        const { error: markCardsError } = await supabaseServer
+          .from('player_cards')
+          .update({ is_used: true })
+          .in('id', usedCardIds);
+          
+        if (markCardsError) {
+          console.error(`[Results API] Failed to mark cards as used:`, markCardsError);
+        } else {
+          console.log(`[Results API] Successfully marked ${usedCardIds.length} cards as used`);
+        }
+      }
+      
       // Group scores by player to handle multiple actions per player
       const playerScoresMap = new Map<string, number>();
       finalScores.forEach(score => {
@@ -290,24 +309,54 @@ export async function POST(
       });
 
     } catch (supabaseError) {
-      console.error('Supabase operation failed:', supabaseError);
+      console.error('Supabase operation failed, using memory-based game state:', supabaseError);
       
-      // Mock mode - return mock results
+      // Memory mode - process actual game results
+      const memoryGameRoom = mockGameState.getGameRoom(roomCode);
+      if (!memoryGameRoom) {
+        return NextResponse.json<ApiResponse<null>>({
+          error: 'Game room not found'
+        }, { status: 404 });
+      }
+
+      const currentRound = mockGameState.getCurrentRound(memoryGameRoom.id, memoryGameRoom.current_round);
+      if (!currentRound) {
+        return NextResponse.json<ApiResponse<null>>({
+          error: 'Current round not found'
+        }, { status: 404 });
+      }
+
+      // Get all player actions for this round
+      const allPlayerActions = mockGameState.getAllRoundActions(currentRound.id);
+      if (allPlayerActions.length === 0) {
+        return NextResponse.json<ApiResponse<null>>({
+          error: 'No player actions found for this round'
+        }, { status: 404 });
+      }
+
+      // Mark used cards as used (NOW that results are being calculated)
+      allPlayerActions.forEach(action => {
+        if (action.card_id) {
+          mockGameState.markCardAsUsed(action.card_id);
+        }
+      });
+
+      // Calculate results (simplified for memory mode)
+      const mockResults = allPlayerActions.map(action => ({
+        playerId: action.player_id,
+        username: `Player_${action.player_id.slice(-4)}`,
+        airplaneNumber: 1, // Simplified
+        cardType: 'passenger', // Simplified
+        finalScore: Math.floor(Math.random() * 5) + 1
+      }));
+
       return NextResponse.json<ApiResponse<any>>({
         data: {
-          roundResults: [
-            {
-              playerId: userId,
-              username: 'Mock Player',
-              airplaneNumber: 1,
-              cardType: 'passenger',
-              finalScore: 5
-            }
-          ],
+          roundResults: mockResults,
           gameFinished: false,
-          nextRound: 2
+          nextRound: memoryGameRoom.current_round + 1
         },
-        message: 'Round results calculated (mock mode - Supabase unavailable)'
+        message: 'Round results calculated (memory mode)'
       });
     }
 

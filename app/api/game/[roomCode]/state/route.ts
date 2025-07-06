@@ -89,13 +89,21 @@ export async function GET(
           console.log(`[State API Supabase] Airplane data:`, airplanes);
         }
 
-        // My cards info - show all cards during the round (don't filter by is_used)
+        // My cards info - only show unused cards
         const { data: cardData } = await supabaseServer
           .from('player_cards')
           .select('*')
-          .eq('player_id', currentPlayer.id);
+          .eq('player_id', currentPlayer.id)
+          .eq('is_used', false);
 
         myCards = cardData;
+        
+        // Debug log for card investigation
+        console.log(`[State API Debug] Player ${currentPlayer.username} (${currentPlayer.id}) cards:`, {
+          total_cards: myCards?.length || 0,
+          card_types: myCards?.map(c => c.card_type) || [],
+          card_ids: myCards?.map(c => c.id) || []
+        });
 
         // My actions info (current round)
         if (currentRound) {

@@ -64,7 +64,18 @@ export async function POST(request: NextRequest) {
         }, { status: 400 });
       }
 
-      // Distribute cards to each player
+      // Clear existing cards for all players in this game
+      const { error: clearCardsError } = await supabaseServer
+        .from('player_cards')
+        .delete()
+        .in('player_id', players.map(p => p.id));
+
+      if (clearCardsError) {
+        console.error('Cards clearing error:', clearCardsError);
+        // Continue anyway - this might be the first time starting
+      }
+
+      // Distribute fresh cards to each player
       const cardInserts = [];
       for (let i = 0; i < players.length; i++) {
         const playerCardSet = generatePlayerCards(); // Generate new card set for each player
@@ -185,7 +196,12 @@ export async function POST(request: NextRequest) {
         }, { status: 400 });
       }
 
-      // Distribute cards to each player
+      // Clear existing cards for all players
+      for (const player of players) {
+        mockGameState.clearPlayerCards(player.id);
+      }
+
+      // Distribute fresh cards to each player
       for (const player of players) {
         const playerCardSet = generatePlayerCards();
         mockGameState.addPlayerCards(player.id, playerCardSet);
