@@ -67,7 +67,22 @@ export function calculateRoundScore(
       return 0;
   }
 }
-
+/**
+ * 비행기 번호에 따라 최대 탑승 인원 반환
+ */
+export function getAirplaneMaxPassengers(airplaneNumber: number): number {
+  switch (airplaneNumber) {
+    case 1:
+    case 2:
+      return 2;
+    case 3:
+      return 4;
+    case 4:
+      return 8;
+    default:
+      return 2; // 예외 처리: 기본값 2명
+  }
+}
 /**
  * 하이재커 효과 적용
  * 하이재커가 있는 비행기의 다른 모든 카드는 0점 처리
@@ -132,13 +147,13 @@ export function getNextPhase(currentPhase: string): string {
 export function getPhaseTimeLimit(phase: string): number {
   switch (phase) {
     case 'airplane_selection':
-      return 30; // 30초
+      return 15; // 30초
     case 'discussion':
-      return 120; // 2분
+      return 10; // 30초
     case 'card_selection':
-      return 30; // 30초
+      return 15; // 30초
     case 'results':
-      return 15; // 15초
+      return 30; // 30초로 변경
     default:
       return 0;
   }

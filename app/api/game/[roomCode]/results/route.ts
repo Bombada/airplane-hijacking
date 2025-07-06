@@ -126,13 +126,15 @@ export async function POST(
       }
 
       if (!playerActions || playerActions.length === 0) {
-        console.error('No player actions found for round:', currentRound.id);
-        console.error('Game room:', gameRoom);
-        console.error('Current round:', currentRound);
-        console.error('Player actions query result:', playerActions);
-        return NextResponse.json<ApiResponse<null>>({
-          error: `No player actions found for this round. Room: ${roomCode}, Round: ${currentRound.round_number}, Phase: ${gameRoom.current_phase}`
-        }, { status: 404 });
+        console.warn('No player actions found for round:', currentRound.id);
+        return NextResponse.json<ApiResponse<any>>({
+          data: {
+            roundResults: [],
+            gameFinished: false,
+            nextRound: gameRoom.current_round + 1
+          },
+          message: 'No player actions, empty results'
+        });
       }
 
       // Calculate passengers per airplane

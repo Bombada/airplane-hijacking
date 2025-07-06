@@ -121,7 +121,8 @@ export async function POST(request: NextRequest) {
       const airplaneNumbers = generateAirplaneNumbers();
       const airplaneInserts = airplaneNumbers.map(num => ({
         game_round_id: round.id,
-        airplane_number: num
+        airplane_number: num,
+        max_passengers: getAirplaneMaxPassengers(num)
       }));
 
       const { error: airplanesError } = await supabase

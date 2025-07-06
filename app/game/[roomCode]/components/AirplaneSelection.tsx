@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 interface Airplane {
   id: string;
   airplane_number: number;
+  max_passengers: number;
 }
 
 interface Player {
@@ -133,6 +134,16 @@ export default function AirplaneSelection({
   const getAirplaneEmoji = (number: number) => {
     const emojis = ['✈️', '🛩️', '🛫', '🛬'];
     return emojis[number - 1] || '✈️';
+  };
+
+  const handleSelectAirplane = (airplaneId: string) => {
+    const airplane = airplanes.find(a => a.id === airplaneId);
+    const playersOnThisAirplane = getPlayersOnAirplane(airplaneId);
+    if (airplane && playersOnThisAirplane.length >= airplane.max_passengers) {
+      alert('이 비행기는 인원 제한이 초과되었습니다.');
+      return;
+    }
+    onSelectAirplane(airplaneId);
   };
 
   // Get players who selected each airplane

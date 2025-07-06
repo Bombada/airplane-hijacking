@@ -1,19 +1,24 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import AirplanePassengers from './AirplanePassengers';
 
 interface DiscussionPhaseProps {
   players: any[];
   currentRound: any;
   phaseStartTime: string;
   roomCode: string;  // Add roomCode prop
+  airplanes: any[];
+  allPlayerActions: any[];
 }
 
 export default function DiscussionPhase({ 
   players, 
   currentRound, 
   phaseStartTime,
-  roomCode  // Add roomCode parameter
+  roomCode,  // Add roomCode parameter
+  airplanes,
+  allPlayerActions
 }: DiscussionPhaseProps) {
   const [timeRemaining, setTimeRemaining] = useState(120); // 2분
 
@@ -100,6 +105,12 @@ export default function DiscussionPhase({
           남은 시간: {formatTime(timeRemaining)}
         </p>
       </div>
+
+      <AirplanePassengers 
+        airplanes={airplanes}
+        players={players}
+        allPlayerActions={allPlayerActions}
+      />
 
       {/* 플레이어 상태 */}
       <div className="mb-6">

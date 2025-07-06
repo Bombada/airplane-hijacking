@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import AirplanePassengers from './AirplanePassengers';
 
 interface Card {
   id: string;
@@ -10,9 +11,12 @@ interface Card {
 interface CardSelectionProps {
   cards: Card[];
   onSelectCard: (cardId: string) => void;
-  selectedCard?: string;
-  phaseStartTime?: string;  // Add this line
-  roomCode: string;  // Add this line
+  selectedCard: string;
+  phaseStartTime: string;
+  roomCode: string;
+  airplanes: any[];
+  players: any[];
+  allPlayerActions: any[];
 }
 
 export default function CardSelection({ 
@@ -20,7 +24,10 @@ export default function CardSelection({
   onSelectCard, 
   selectedCard,
   phaseStartTime,
-  roomCode
+  roomCode,
+  airplanes,
+  players,
+  allPlayerActions
 }: CardSelectionProps) {
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
 
@@ -146,7 +153,7 @@ export default function CardSelection({
         <h2 className="text-2xl font-bold text-gray-800">카드 선택</h2>
         {timeRemaining !== null && (
           <div className={`text-lg font-bold ${timerColor}`}>
-            {Math.ceil(timeRemaining / 1000)}초
+            {Math.ceil(timeRemaining! / 1000)}초
           </div>
         )}
       </div>
@@ -260,6 +267,12 @@ export default function CardSelection({
           </div>
         </div>
       </div>
+
+      <AirplanePassengers 
+        airplanes={airplanes}
+        players={players}
+        allPlayerActions={allPlayerActions}
+      />
     </div>
   );
 } 

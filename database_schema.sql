@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS airplanes (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   game_round_id UUID NOT NULL REFERENCES game_rounds(id) ON DELETE CASCADE,
   airplane_number INTEGER NOT NULL CHECK (airplane_number BETWEEN 1 AND 4),
+  max_passengers INTEGER NOT NULL DEFAULT 2,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(game_round_id, airplane_number)
 );

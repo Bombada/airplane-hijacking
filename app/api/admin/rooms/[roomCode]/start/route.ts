@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/server';
+import { generatePlayerCards } from '@/lib/game/gameLogic';
 
 interface RouteParams {
   params: { roomCode: string };
@@ -65,7 +66,7 @@ async function sendAdminStateChangeNotification(roomCode: string, action: string
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
-    const { roomCode } = params;
+    const { roomCode } = await params;
 
     // Get room details
     const { data: room, error: roomError } = await supabase
@@ -149,14 +150,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Create initial cards for each player
     const cardTypes = ['passenger', 'follower', 'hijacker'];  // Update card types to match schema
-    const cardsPerPlayer = 3;
+  
     
     for (const player of players) {
       const playerCards = [];
-      for (let i = 0; i < cardsPerPlayer; i++) {
+      const playerCardSet = generatePlayerCards();
+      for (let i = 0; i < playerCardSet.length; i++) {
         playerCards.push({
           player_id: player.id,
-          card_type: cardTypes[i],
+          card_type: playerCardSet[i],
           is_used: false
         });
       }

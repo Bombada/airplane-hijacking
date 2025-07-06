@@ -360,14 +360,15 @@ export default function GameRoomPage() {
 
       case 'discussion':
         return (
-          <DiscussionPhase
-            players={gameState.players}
+          <DiscussionPhase 
+            players={gameState.players} 
             currentRound={gameState.currentRound}
             phaseStartTime={gameState.gameRoom.phase_start_time}
             roomCode={roomCode}
+            airplanes={gameState.airplanes}
+            allPlayerActions={gameState.allPlayerActions}
           />
         );
-
       case 'card_selection':
         // 로컬 선택 상태를 우선적으로 사용 (즉시 UI 반영)
         let selectedCard: string | undefined = localSelectedCard;
@@ -408,22 +409,28 @@ export default function GameRoomPage() {
         });
         
         return (
-          <CardSelection
-            cards={gameState.myCards || []}
+          <CardSelection 
+            cards={gameState.myCards || []} 
             onSelectCard={handleCardSelection}
             selectedCard={selectedCard}
             phaseStartTime={gameState.gameRoom.phase_start_time}
             roomCode={roomCode}
+            airplanes={gameState.airplanes}
+            players={gameState.players}
+            allPlayerActions={gameState.allPlayerActions}
           />
         );
 
       case 'results':
         return (
-          <ResultsPhase
+          <ResultsPhase 
             roomCode={roomCode}
             userId={userId}
             currentRound={gameState.currentRound}
             phaseStartTime={gameState.gameRoom.phase_start_time}
+            airplanes={gameState.airplanes}
+            players={gameState.players}
+            allPlayerActions={gameState.allPlayerActions}
           />
         );
 
