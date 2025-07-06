@@ -98,9 +98,9 @@ BEGIN
   -- Create airplanes with default max passengers for the new round
   INSERT INTO airplanes (game_round_id, airplane_number, max_passengers)
   VALUES
-    (NEW.id, 1, 2),
-    (NEW.id, 2, 2),
-    (NEW.id, 3, 4),
+    (NEW.id, 1, 1),
+    (NEW.id, 2, 1),
+    (NEW.id, 3, 3),
     (NEW.id, 4, 8);
   RETURN NEW;
 END;

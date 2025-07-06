@@ -57,6 +57,25 @@ export async function POST(
       }, { status: 500 });
     }
 
+    // Create airplanes for the new round
+    const airplaneInserts = [
+      { game_round_id: newRound.id, airplane_number: 1, max_passengers: 1 },
+      { game_round_id: newRound.id, airplane_number: 2, max_passengers: 1 },
+      { game_round_id: newRound.id, airplane_number: 3, max_passengers: 3 },
+      { game_round_id: newRound.id, airplane_number: 4, max_passengers: 8 }
+    ];
+
+    const { error: airplanesError } = await supabase
+      .from('airplanes')
+      .insert(airplaneInserts);
+
+    if (airplanesError) {
+      console.error('Failed to create airplanes for new round:', airplanesError);
+      return NextResponse.json<ApiResponse<null>>({
+        error: 'Failed to create airplanes for new round'
+      }, { status: 500 });
+    }
+
     // Update game room
     const { error: updateError } = await supabase
       .from('game_rooms')
@@ -76,7 +95,9 @@ export async function POST(
     // Notify players via WebSocket
     try {
       const WebSocket = require('ws');
-      const ws = new WebSocket('ws://localhost:8080');
+      const port = process.env.NEXT_PUBLIC_WS_PORT || '8080';
+      const host = process.env.NEXT_PUBLIC_WS_HOST || 'localhost';
+      const ws = new WebSocket(`ws://${host}:${port}`);
       
       const timeout = setTimeout(() => {
         console.log('[Admin] WebSocket notification timeout');
@@ -116,6 +137,7 @@ export async function POST(
       ws.on('error', (error: any) => {
         console.error('WebSocket error in next round notification:', error);
         clearTimeout(timeout);
+        // Don't throw error, just log it
       });
       
       ws.on('close', () => {
@@ -126,6 +148,7 @@ export async function POST(
       // Continue anyway - the API call succeeded
     }
 
+    // Return success response even if WebSocket notification fails
     return NextResponse.json<ApiResponse<{ message: string }>>({
       data: { message: `Round ${nextRound} started successfully` },
       message: `Round ${nextRound} started`

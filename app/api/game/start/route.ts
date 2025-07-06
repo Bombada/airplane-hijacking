@@ -117,6 +117,42 @@ export async function POST(request: NextRequest) {
         }, { status: 500 });
       }
 
+      // Create airplanes for the first round
+      const airplaneNumbers = generateAirplaneNumbers();
+      const airplaneInserts = airplaneNumbers.map(num => {
+        let max_passengers: number;
+        switch (num) {
+          case 1:
+          case 2:
+            max_passengers = 1;
+            break;
+          case 3:
+            max_passengers = 3;
+            break;
+          case 4:
+            max_passengers = 8;
+            break;
+          default:
+            max_passengers = 1;
+        }
+        return {
+          game_round_id: round.id,
+          airplane_number: num,
+          max_passengers: max_passengers
+        };
+      });
+
+      const { error: airplanesError } = await supabase
+        .from('airplanes')
+        .insert(airplaneInserts);
+
+      if (airplanesError) {
+        console.error('Airplanes creation error:', airplanesError);
+        return NextResponse.json<ApiResponse<null>>({
+          error: 'Failed to create airplanes'
+        }, { status: 500 });
+      }
+
       // Update game room status
       const { data: updatedRoom, error: updateError } = await supabase
         .from('game_rooms')
