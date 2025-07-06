@@ -161,13 +161,13 @@ class MockGameState {
           max_passengers = 1;
           break;
         case 3:
-          max_passengers = 2;
+          max_passengers = 3;
           break;
         case 4:
           max_passengers = 8;
           break;
         default:
-          max_passengers = 2;
+          max_passengers = 1;
       }
 
       return {

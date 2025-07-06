@@ -365,8 +365,10 @@ export default function GameRoomPage() {
             currentRound={gameState.currentRound}
             phaseStartTime={gameState.gameRoom.phase_start_time}
             roomCode={roomCode}
-            airplanes={gameState.airplanes}
-            allPlayerActions={gameState.allPlayerActions}
+            airplanes={gameState.airplanes || []}
+            allPlayerActions={gameState.allPlayerActions || []}
+            myCards={gameState.myCards || []}
+            currentUserId={userId || ''}
           />
         );
       case 'card_selection':

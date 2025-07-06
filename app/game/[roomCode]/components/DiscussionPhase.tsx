@@ -7,18 +7,22 @@ interface DiscussionPhaseProps {
   players: any[];
   currentRound: any;
   phaseStartTime: string;
-  roomCode: string;  // Add roomCode prop
+  roomCode: string;
   airplanes: any[];
   allPlayerActions: any[];
+  myCards: any[];
+  currentUserId: string;
 }
 
 export default function DiscussionPhase({ 
   players, 
   currentRound, 
   phaseStartTime,
-  roomCode,  // Add roomCode parameter
+  roomCode,
   airplanes,
-  allPlayerActions
+  allPlayerActions,
+  myCards,
+  currentUserId
 }: DiscussionPhaseProps) {
   const [timeRemaining, setTimeRemaining] = useState(120); // 2분
 
@@ -80,6 +84,51 @@ export default function DiscussionPhase({
     return 'text-red-600';
   };
 
+  const getCardEmoji = (cardType: string) => {
+    switch (cardType) {
+      case 'passenger':
+        return '👨‍👩‍👧‍👦';
+      case 'follower':
+        return '🐑';
+      case 'hijacker':
+        return '🦹';
+      default:
+        return '❓';
+    }
+  };
+
+  const getCardName = (cardType: string) => {
+    switch (cardType) {
+      case 'passenger':
+        return '승객';
+      case 'follower':
+        return '추종자';
+      case 'hijacker':
+        return '하이재커';
+      default:
+        return '알 수 없음';
+    }
+  };
+
+  const getCardDescription = (cardType: string) => {
+    switch (cardType) {
+      case 'passenger':
+        return '일반 승객입니다. 안전한 비행기에 탑승하여 목적지에 도착하세요.';
+      case 'follower':
+        return '하이재커의 추종자입니다. 하이재커와 같은 비행기에 탑승하면 추가 점수를 얻습니다.';
+      case 'hijacker':
+        return '하이재커입니다. 비행기를 선택하면 해당 비행기는 다른 목적지로 향합니다.';
+      default:
+        return '';
+    }
+  };
+
+  // 카드 타입별 개수 계산
+  const cardCounts = myCards.reduce((acc: Record<string, number>, card: any) => {
+    acc[card.card_type] = (acc[card.card_type] || 0) + 1;
+    return acc;
+  }, {});
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="text-center mb-6">
@@ -104,6 +153,31 @@ export default function DiscussionPhase({
         <p className="text-sm text-gray-600 mt-2">
           남은 시간: {formatTime(timeRemaining)}
         </p>
+      </div>
+
+      {/* 내 보유 카드 */}
+      <div className="mb-8">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">내 보유 카드</h3>
+        <div className="space-y-4">
+          {Object.entries(cardCounts).map(([cardType, count]) => (
+            <div
+              key={cardType}
+              className="p-4 bg-gray-50 rounded-lg border border-gray-200"
+            >
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2 min-w-[120px]">
+                  <span className="text-3xl">{getCardEmoji(cardType)}</span>
+                  <span className="font-medium text-gray-800">
+                    {getCardName(cardType)} x {count}
+                  </span>
+                </div>
+                <p className="text-gray-600 flex-1">
+                  {getCardDescription(cardType)}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <AirplanePassengers 
