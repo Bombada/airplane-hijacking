@@ -65,8 +65,7 @@ async function sendAdminStateChangeNotification(roomCode: string, action: string
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
-    const { roomCode } = await params;
-    const supabase = supabase;
+    const { roomCode } = params;
 
     // Get room details
     const { data: room, error: roomError } = await supabase

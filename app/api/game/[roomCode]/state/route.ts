@@ -108,15 +108,35 @@ export async function GET(
 
         // Airplane info
         if (currentRound) {
-          const { data: airplaneData } = await supabase
+          const { data: airplaneData, error: airplaneError } = await supabase
             .from('airplanes')
-            .select('*')
+            .select(`
+              id,
+              game_round_id,
+              airplane_number,
+              max_passengers
+            `)
             .eq('game_round_id', currentRound.id)
             .order('airplane_number', { ascending: true });
 
+          if (airplaneError) {
+            console.error(`[State API] Error fetching airplanes for round ${currentRound.id}:`, airplaneError);
+            throw new Error(`Failed to fetch airplanes: ${airplaneError.message}`);
+          }
+
+          if (!airplaneData || airplaneData.length === 0) {
+            console.error(`[State API] No airplanes found for round ${currentRound.id}`);
+            throw new Error('No airplanes found for this round');
+          }
+
           airplanes = airplaneData;
-          console.log(`[State API Supabase] Round ${currentRound.id}: Found ${airplanes?.length || 0} airplanes`);
-          console.log(`[State API Supabase] Airplane data:`, airplanes);
+          console.log(`[State API] Round ${currentRound.id}: Found ${airplanes.length} airplanes:`, 
+            airplanes.map(a => ({ 
+              number: a.airplane_number, 
+              id: a.id,
+              max_passengers: a.max_passengers 
+            }))
+          );
         }
 
         // My cards info - only show unused cards

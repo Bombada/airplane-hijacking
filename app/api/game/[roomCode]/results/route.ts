@@ -113,7 +113,7 @@ export async function POST(
         .select(`
           *,
           players!inner(username, total_score),
-          airplanes!inner(airplane_number),
+          airplanes!inner(airplane_number, max_passengers),
           player_cards!inner(card_type)
         `)
         .eq('game_round_id', currentRound.id);
@@ -137,12 +137,17 @@ export async function POST(
         });
       }
 
-      // Calculate passengers per airplane
+      // Calculate passengers per airplane and check max passenger limits
       const airplanePassengers: Record<number, number> = {};
+      const airplaneMaxPassengers: Record<number, number> = {};
       
       playerActions.forEach((action: any) => {
         const airplaneNumber = action.airplanes.airplane_number;
         const cardType = action.player_cards.card_type;
+        const maxPassengers = action.airplanes.max_passengers;
+        
+        // Store max passengers limit for each airplane
+        airplaneMaxPassengers[airplaneNumber] = maxPassengers;
         
         if (cardType === 'passenger') {
           airplanePassengers[airplaneNumber] = (airplanePassengers[airplaneNumber] || 0) + 1;
@@ -158,7 +163,8 @@ export async function POST(
         baseScore: calculateRoundScore(
           airplanePassengers,
           action.airplanes.airplane_number,
-          action.player_cards.card_type
+          action.player_cards.card_type,
+          airplaneMaxPassengers[action.airplanes.airplane_number]
         )
       }));
 

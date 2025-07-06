@@ -41,13 +41,20 @@ export function generateAirplaneNumbers(): number[] {
  * @param airplanePassengers 각 비행기별 승객 수
  * @param playerAirplane 플레이어가 선택한 비행기 번호
  * @param playerCard 플레이어가 사용한 카드 타입
+ * @param maxPassengers 해당 비행기의 최대 탑승객 수
  */
 export function calculateRoundScore(
   airplanePassengers: Record<number, number>,
   playerAirplane: number,
-  playerCard: CardType
+  playerCard: CardType,
+  maxPassengers: number
 ): number {
   const passengersOnAirplane = airplanePassengers[playerAirplane] || 0;
+  
+  // 최대 탑승객 수를 초과하면 0점 처리
+  if (passengersOnAirplane > maxPassengers) {
+    return 0;
+  }
   
   switch (playerCard) {
     case 'passenger':
@@ -65,22 +72,6 @@ export function calculateRoundScore(
     
     default:
       return 0;
-  }
-}
-/**
- * 비행기 번호에 따라 최대 탑승 인원 반환
- */
-export function getAirplaneMaxPassengers(airplaneNumber: number): number {
-  switch (airplaneNumber) {
-    case 1:
-    case 2:
-      return 2;
-    case 3:
-      return 4;
-    case 4:
-      return 8;
-    default:
-      return 2; // 예외 처리: 기본값 2명
   }
 }
 /**

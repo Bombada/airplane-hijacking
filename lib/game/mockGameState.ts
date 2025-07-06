@@ -32,6 +32,7 @@ interface MockAirplane {
   game_round_id: string;
   airplane_number: number;
   passenger_count?: number;
+  max_passengers?: number;
 }
 
 interface MockPlayerCard {
@@ -151,12 +152,31 @@ class MockGameState {
 
   // Airplane operations
   createAirplanes(roundId: string, airplaneNumbers: number[]): MockAirplane[] {
-    const airplanes: MockAirplane[] = airplaneNumbers.map(num => ({
-      id: `airplane-${Date.now()}-${num}-${Math.random().toString(36).substr(2, 9)}`,
-      game_round_id: roundId,
-      airplane_number: num,
-      passenger_count: Math.floor(Math.random() * 8) + 1 // 1-8 passengers
-    }));
+    const airplanes: MockAirplane[] = airplaneNumbers.map(num => {
+      // Set max_passengers based on airplane number
+      let max_passengers: number;
+      switch (num) {
+        case 1:
+        case 2:
+          max_passengers = 1;
+          break;
+        case 3:
+          max_passengers = 2;
+          break;
+        case 4:
+          max_passengers = 8;
+          break;
+        default:
+          max_passengers = 2;
+      }
+
+      return {
+        id: `airplane-${Date.now()}-${num}-${Math.random().toString(36).substr(2, 9)}`,
+        game_round_id: roundId,
+        airplane_number: num,
+        max_passengers: max_passengers
+      };
+    });
 
     this.airplanes.set(roundId, airplanes);
     return airplanes;

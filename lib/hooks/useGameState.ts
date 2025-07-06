@@ -2,12 +2,19 @@
 
 import { useState, useEffect, useRef } from 'react';
 
+interface Airplane {
+  id: string;
+  game_round_id: string;
+  airplane_number: number;
+  max_passengers: number;
+}
+
 interface GameState {
   gameRoom: any;
   players: any[];
   currentPlayer: any;
   currentRound?: any;
-  airplanes?: any[];
+  airplanes?: Airplane[];
   myCards?: any[];
   myActions?: any[];
   allPlayerActions?: any[];

@@ -117,25 +117,6 @@ export async function POST(request: NextRequest) {
         }, { status: 500 });
       }
 
-      // Create airplanes (1-4)
-      const airplaneNumbers = generateAirplaneNumbers();
-      const airplaneInserts = airplaneNumbers.map(num => ({
-        game_round_id: round.id,
-        airplane_number: num,
-        max_passengers: getAirplaneMaxPassengers(num)
-      }));
-
-      const { error: airplanesError } = await supabase
-        .from('airplanes')
-        .insert(airplaneInserts);
-
-      if (airplanesError) {
-        console.error('Airplanes creation error:', airplanesError);
-        return NextResponse.json<ApiResponse<null>>({
-          error: 'Failed to create airplanes'
-        }, { status: 500 });
-      }
-
       // Update game room status
       const { data: updatedRoom, error: updateError } = await supabase
         .from('game_rooms')

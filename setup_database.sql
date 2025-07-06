@@ -53,6 +53,7 @@ CREATE TABLE airplanes (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   game_round_id UUID NOT NULL REFERENCES game_rounds(id) ON DELETE CASCADE,
   airplane_number INTEGER NOT NULL CHECK (airplane_number BETWEEN 1 AND 4),
+  max_passengers INTEGER NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(game_round_id, airplane_number)
 );
@@ -89,6 +90,27 @@ CREATE TABLE round_results (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(player_id, game_round_id)
 );
+
+-- Function to create airplanes with default max passengers
+CREATE OR REPLACE FUNCTION create_round_airplanes()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Create airplanes with default max passengers for the new round
+  INSERT INTO airplanes (game_round_id, airplane_number, max_passengers)
+  VALUES
+    (NEW.id, 1, 2),
+    (NEW.id, 2, 2),
+    (NEW.id, 3, 4),
+    (NEW.id, 4, 8);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to automatically create airplanes when a new round is created
+CREATE TRIGGER create_round_airplanes_trigger
+AFTER INSERT ON game_rounds
+FOR EACH ROW
+EXECUTE FUNCTION create_round_airplanes();
 
 -- Indexes for better performance
 CREATE INDEX idx_game_rooms_room_code ON game_rooms(room_code);

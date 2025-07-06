@@ -66,10 +66,10 @@ async function sendPhaseChangeNotification(roomCode: string, phase: string) {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { roomCode: string } }
+  { params }: { params: Promise<{ roomCode: string }> }
 ) {
   try {
-    const { roomCode } = params;
+    const { roomCode } = await params;
     const { phase } = await request.json();
 
     if (!phase) {

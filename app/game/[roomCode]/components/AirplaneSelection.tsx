@@ -110,26 +110,26 @@ export default function AirplaneSelection({
     return 'text-red-600';
   };
   
-  // Debug logging
-  console.log('[AirplaneSelection] Received data:', {
-    airplanes: airplanes?.length,
-    players: players?.length,
-    allPlayerActions: allPlayerActions?.length,
-    selectedAirplane,
-    currentUserId,
-    actions: allPlayerActions,
-    detailedActions: allPlayerActions?.map(action => ({
-      id: action.id,
-      player_id: action.player_id,
-      action_type: action.action_type || action.actionType,
-      airplane_id: action.airplane_id
-    })),
-    playersData: players?.map(p => ({
-      id: p.id,
-      user_id: p.user_id,
-      username: p.username
-    }))
-  });
+  // // Debug logging
+  // console.log('[AirplaneSelection] Received data:', {
+  //   airplanes: airplanes?.length,
+  //   players: players?.length,
+  //   allPlayerActions: allPlayerActions?.length,
+  //   selectedAirplane,
+  //   currentUserId,
+  //   actions: allPlayerActions,
+  //   detailedActions: allPlayerActions?.map(action => ({
+  //     id: action.id,
+  //     player_id: action.player_id,
+  //     action_type: action.action_type || action.actionType,
+  //     airplane_id: action.airplane_id
+  //   })),
+  //   playersData: players?.map(p => ({
+  //     id: p.id,
+  //     user_id: p.user_id,
+  //     username: p.username
+  //   }))
+  // });
   
   const getAirplaneEmoji = (number: number) => {
     const emojis = ['✈️', '🛩️', '🛫', '🛬'];
@@ -174,14 +174,14 @@ export default function AirplaneSelection({
 
   const playersNotSelected = getPlayersNotSelected();
 
-  console.log('[AirplaneSelection] Received data:', {
-    airplanes: airplanes.length,
-    players: players.length,
-    allPlayerActions: allPlayerActions.length,
-    selectedAirplane,
-    currentUserId,
-    playersNotSelected: playersNotSelected.length
-  });
+  // console.log('[AirplaneSelection] Received data:', {
+  //   airplanes: airplanes.length,
+  //   players: players.length,
+  //   allPlayerActions: allPlayerActions.length,
+  //   selectedAirplane,
+  //   currentUserId,
+  //   playersNotSelected: playersNotSelected.length
+  // });
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -207,11 +207,11 @@ export default function AirplaneSelection({
                   ? 'border-blue-500 bg-blue-50' 
                   : 'border-gray-300 hover:border-gray-400'
               }`}
-              onClick={() => onSelectAirplane(airplane.id)}
+              onClick={() => handleSelectAirplane(airplane.id)}
             >
               <div className="text-center">
                 <h3 className="text-lg font-semibold mb-2">
-                  비행기 {airplane.airplane_number}
+                  {getAirplaneEmoji(airplane.airplane_number)} 비행기 {airplane.airplane_number}
                 </h3>
                 
                 {isSelected && (
@@ -221,7 +221,22 @@ export default function AirplaneSelection({
                 )}
                 
                 <div className="text-sm text-gray-600">
-                  <div className="mb-1">승객: {playersOnThisAirplane.length}명</div>
+                  <div className="mb-1">
+                    <span className={`font-medium ${
+                      playersOnThisAirplane.length >= airplane.max_passengers 
+                        ? 'text-red-600' 
+                        : playersOnThisAirplane.length === airplane.max_passengers - 1
+                        ? 'text-yellow-600'
+                        : 'text-green-600'
+                    }`}>
+                      {playersOnThisAirplane.length}/{airplane.max_passengers}
+                    </span> 명 탑승
+                    {playersOnThisAirplane.length >= airplane.max_passengers && (
+                      <div className="text-red-600 text-xs mt-1">
+                        탑승 불가 (정원 초과)
+                      </div>
+                    )}
+                  </div>
                   {playersOnThisAirplane.length > 0 && (
                     <div className="text-xs">
                       {playersOnThisAirplane.join(', ')}

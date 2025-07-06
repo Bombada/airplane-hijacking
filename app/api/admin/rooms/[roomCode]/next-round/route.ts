@@ -8,7 +8,7 @@ export async function POST(
   { params }: { params: { roomCode: string } }
 ) {
   try {
-    const { roomCode } = params;
+    const { roomCode } = await params;
 
     // Get game room
     const { data: gameRoom, error: roomError } =  await supabase
@@ -54,22 +54,6 @@ export async function POST(
     if (newRoundError || !newRound) {
       return NextResponse.json<ApiResponse<null>>({
         error: 'Failed to create new round'
-      }, { status: 500 });
-    }
-
-    // Create new airplanes
-    const airplaneInserts = [1, 2, 3, 4].map(num => ({
-      game_round_id: newRound.id,
-      airplane_number: num
-    }));
-
-    const { error: airplanesError } = await supabase
-      .from('airplanes')
-      .insert(airplaneInserts);
-
-    if (airplanesError) {
-      return NextResponse.json<ApiResponse<null>>({
-        error: 'Failed to create airplanes'
       }, { status: 500 });
     }
 
