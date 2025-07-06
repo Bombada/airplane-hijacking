@@ -79,8 +79,33 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     }
 
-    // Delete all game actions and rounds for this room
+    // Get all players in this room first
+    const { data: players } = await supabase
+      .from('players')
+      .select('id')
+      .eq('game_room_id', room.id);
+
+    // Delete all player cards for this room
+    if (players && players.length > 0) {
+      const playerIds = players.map(p => p.id);
+      await supabase.from('player_cards').delete().in('player_id', playerIds);
+    }
+
+    // Get all round IDs for this room
+    const { data: rounds } = await supabase
+      .from('game_rounds')
+      .select('id')
+      .eq('game_room_id', room.id);
+
+    // Delete all game actions, round results, and rounds for this room
     await supabase.from('player_actions').delete().eq('game_room_id', room.id);
+    
+    // Delete round results if there are any rounds
+    if (rounds && rounds.length > 0) {
+      const roundIds = rounds.map(r => r.id);
+      await supabase.from('round_results').delete().in('game_round_id', roundIds);
+    }
+    
     await supabase.from('game_rounds').delete().eq('game_room_id', room.id);
 
     // Reset room to initial state

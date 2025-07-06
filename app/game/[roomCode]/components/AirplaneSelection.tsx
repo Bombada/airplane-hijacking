@@ -1,5 +1,7 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+
 interface Airplane {
   id: string;
   airplane_number: number;
@@ -27,6 +29,8 @@ interface AirplaneSelectionProps {
   onSelectAirplane: (airplaneId: string) => void;
   selectedAirplane?: string;
   currentUserId: string;
+  phaseStartTime?: string;  // Add this line
+  roomCode: string;  // Add this line
 }
 
 export default function AirplaneSelection({ 
@@ -35,8 +39,75 @@ export default function AirplaneSelection({
   allPlayerActions,
   onSelectAirplane, 
   selectedAirplane,
-  currentUserId
+  currentUserId,
+  phaseStartTime,
+  roomCode
 }: AirplaneSelectionProps) {
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+
+  // Timer logic
+  useEffect(() => {
+    if (!phaseStartTime) {
+      setTimeRemaining(null);
+      return;
+    }
+
+    const startTime = new Date(phaseStartTime).getTime();
+    const duration = 30 * 1000; // 30 seconds
+    const endTime = startTime + duration;
+
+    const timer = setInterval(() => {
+      const now = new Date().getTime();
+      const remaining = Math.max(0, endTime - now);
+      setTimeRemaining(remaining);
+
+      // Only auto-progress when timer expires
+      if (remaining === 0) {
+        handleNextPhase();
+        clearInterval(timer);
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [phaseStartTime]);
+
+  // Function to handle phase transition
+  const handleNextPhase = async () => {
+    try {
+      const port = window.location.port;
+      const baseUrl = port ? `http://localhost:${port}` : window.location.origin;
+      
+      const response = await fetch(`${baseUrl}/api/admin/rooms/${roomCode}/phase`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phase: 'discussion'
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to progress to next phase:', response.status);
+      }
+    } catch (error) {
+      console.error('Error progressing to next phase:', error);
+    }
+  };
+
+  // Format time for display
+  const formatTime = (seconds: number | null) => {
+    if (seconds === null) return '';
+    return `${seconds}초`;
+  };
+
+  // Get timer color based on remaining time
+  const getTimerColor = () => {
+    if (timeRemaining === null) return 'text-gray-600';
+    if (timeRemaining > 10) return 'text-green-600';
+    if (timeRemaining > 5) return 'text-yellow-600';
+    return 'text-red-600';
+  };
   
   // Debug logging
   console.log('[AirplaneSelection] Received data:', {
@@ -103,7 +174,14 @@ export default function AirplaneSelection({
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6 text-center">비행기 선택</h2>
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-bold">비행기 선택</h2>
+        {timeRemaining !== null && (
+          <div className={`text-lg font-bold ${getTimerColor()}`}>
+            {Math.ceil(timeRemaining / 1000)}초
+          </div>
+        )}
+      </div>
       
       <div className="grid grid-cols-2 gap-6 mb-8">
         {airplanes.map((airplane) => {

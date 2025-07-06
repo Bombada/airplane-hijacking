@@ -104,7 +104,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       .update({ 
         status: 'playing',
         current_phase: 'airplane_selection',
-        phase_start_time: new Date().toISOString()
+        phase_start_time: new Date().toISOString(),
+        current_round: 1  
       })
       .eq('id', room.id);
 
@@ -114,17 +115,61 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Create first round
-    const { error: roundError } = await supabase
+    const { data: newRound, error: roundError } = await supabase
       .from('game_rounds')
       .insert({
         game_room_id: room.id,
         round_number: 1,
         phase: 'airplane_selection'
-      });
+      })
+      .select()
+      .single();
 
     if (roundError) {
       console.error('Error creating round:', roundError);
       return NextResponse.json({ error: 'Failed to create game round' }, { status: 500 });
+    }
+
+    // Create initial airplanes for the round
+    const airplanes = [];
+    for (let i = 1; i <= 3; i++) {
+      airplanes.push({
+        game_round_id: newRound.id,
+        airplane_number: i
+      });
+    }
+
+    const { error: airplanesError } = await supabase
+      .from('airplanes')
+      .insert(airplanes);
+
+    if (airplanesError) {
+      console.error('Error creating airplanes:', airplanesError);
+      return NextResponse.json({ error: 'Failed to create airplanes' }, { status: 500 });
+    }
+
+    // Create initial cards for each player
+    const cardTypes = ['passenger', 'follower', 'hijacker'];  // Update card types to match schema
+    const cardsPerPlayer = 3;
+    
+    for (const player of players) {
+      const playerCards = [];
+      for (let i = 0; i < cardsPerPlayer; i++) {
+        playerCards.push({
+          player_id: player.id,
+          card_type: cardTypes[i],
+          is_used: false
+        });
+      }
+
+      const { error: cardsError } = await supabase
+        .from('player_cards')
+        .insert(playerCards);
+
+      if (cardsError) {
+        console.error('Error creating cards for player:', cardsError);
+        return NextResponse.json({ error: 'Failed to create player cards' }, { status: 500 });
+      }
     }
 
     // Send WebSocket notification to all players in the room

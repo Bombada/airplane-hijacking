@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+
 interface Card {
   id: string;
   card_type: 'passenger' | 'follower' | 'hijacker';
@@ -9,13 +11,74 @@ interface CardSelectionProps {
   cards: Card[];
   onSelectCard: (cardId: string) => void;
   selectedCard?: string;
+  phaseStartTime?: string;  // Add this line
+  roomCode: string;  // Add this line
 }
 
 export default function CardSelection({ 
   cards, 
   onSelectCard, 
-  selectedCard
+  selectedCard,
+  phaseStartTime,
+  roomCode
 }: CardSelectionProps) {
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+
+  // Timer logic
+  useEffect(() => {
+    if (!phaseStartTime) {
+      setTimeRemaining(null);
+      return;
+    }
+
+    const startTime = new Date(phaseStartTime).getTime();
+    const duration = 30 * 1000; // 30 seconds
+    const endTime = startTime + duration;
+
+    const timer = setInterval(() => {
+      const now = new Date().getTime();
+      const remaining = Math.max(0, endTime - now);
+      setTimeRemaining(remaining);
+
+      // Only auto-progress when timer expires
+      if (remaining === 0) {
+        handleNextPhase();
+        clearInterval(timer);
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [phaseStartTime]);
+
+  // Function to handle phase transition
+  const handleNextPhase = async () => {
+    try {
+      const port = window.location.port;
+      const baseUrl = port ? `http://localhost:${port}` : window.location.origin;
+      
+      const response = await fetch(`${baseUrl}/api/admin/rooms/${roomCode}/phase`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phase: 'results'  // Change this from 'discussion' to 'results'
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to progress to next phase:', response.status);
+      }
+    } catch (error) {
+      console.error('Error progressing to next phase:', error);
+    }
+  };
+
+  // Timer color based on remaining time
+  const timerColor = timeRemaining === null ? 'text-gray-500' :
+    timeRemaining > 30000 ? 'text-green-500' :
+    timeRemaining > 10000 ? 'text-yellow-500' :
+    'text-red-500';
   
   const getCardInfo = (type: string) => {
     switch (type) {
@@ -79,10 +142,16 @@ export default function CardSelection({
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">카드 선택</h2>
-        <p className="text-gray-600">사용할 카드를 선택하세요</p>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-800">카드 선택</h2>
+        {timeRemaining !== null && (
+          <div className={`text-lg font-bold ${timerColor}`}>
+            {Math.ceil(timeRemaining / 1000)}초
+          </div>
+        )}
       </div>
+      
+      <p className="text-gray-600 text-center mb-6">사용할 카드를 선택하세요</p>
 
       {/* 현재 사용자의 카드 선택 상태만 표시 */}
       {!hasSelectedCard && (

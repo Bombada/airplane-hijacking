@@ -6,12 +6,14 @@ interface DiscussionPhaseProps {
   players: any[];
   currentRound: any;
   phaseStartTime: string;
+  roomCode: string;  // Add roomCode prop
 }
 
 export default function DiscussionPhase({ 
   players, 
   currentRound, 
-  phaseStartTime 
+  phaseStartTime,
+  roomCode  // Add roomCode parameter
 }: DiscussionPhaseProps) {
   const [timeRemaining, setTimeRemaining] = useState(120); // 2분
 
@@ -29,12 +31,37 @@ export default function DiscussionPhase({
       setTimeRemaining(remaining);
 
       if (remaining === 0) {
+        handleNextPhase();  // Call handleNextPhase when timer reaches 0
         clearInterval(timer);
       }
     }, 1000);
 
     return () => clearInterval(timer);
   }, [phaseStartTime]);
+
+  // Function to handle phase transition
+  const handleNextPhase = async () => {
+    try {
+      const port = window.location.port;
+      const baseUrl = port ? `http://localhost:${port}` : window.location.origin;
+      
+      const response = await fetch(`${baseUrl}/api/admin/rooms/${roomCode}/phase`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phase: 'card_selection'
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to progress to next phase:', response.status);
+      }
+    } catch (error) {
+      console.error('Error progressing to next phase:', error);
+    }
+  };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

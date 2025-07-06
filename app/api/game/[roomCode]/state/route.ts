@@ -56,6 +56,36 @@ export async function GET(
         }, { status: 404 });
       }
 
+      // 자동 시작 타이머 확인
+      let autoStartTime = null;
+      if (gameRoom.current_phase === 'waiting') {
+        const hasMinPlayers = players.length >= 2;
+        const allPlayersReady = players.every((p: any) => p.is_ready);
+        
+        if (hasMinPlayers && allPlayersReady) {
+          // 모든 플레이어가 준비완료인 경우, 자동 시작 시간 설정
+          if (!gameRoom.phase_start_time) {
+            // 자동 시작 시간이 설정되지 않은 경우 설정
+            const startTime = new Date().toISOString();
+            await supabaseServer
+              .from('game_rooms')
+              .update({ phase_start_time: startTime })
+              .eq('id', gameRoom.id);
+            autoStartTime = startTime;
+          } else {
+            autoStartTime = gameRoom.phase_start_time;
+          }
+        } else {
+          // 조건이 맞지 않으면 자동 시작 시간 제거
+          if (gameRoom.phase_start_time) {
+            await supabaseServer
+              .from('game_rooms')
+              .update({ phase_start_time: null })
+              .eq('id', gameRoom.id);
+          }
+        }
+      }
+
       let currentRound = null;
       let airplanes = null;
       let myCards = null;
@@ -134,7 +164,8 @@ export async function GET(
         airplanes: airplanes?.length,
         myCards: myCards?.length,
         myActions: myActions?.length,
-        allPlayerActions: allPlayerActions?.length
+        allPlayerActions: allPlayerActions?.length,
+        autoStartTime
       });
 
       return NextResponse.json<ApiResponse<any>>({
@@ -147,6 +178,7 @@ export async function GET(
           myCards,
           myActions,
           allPlayerActions,
+          autoStartTime,
           hasActiveTimer: mockGameState.hasActiveTimer(roomCode)
         }
       });
@@ -169,6 +201,30 @@ export async function GET(
         return NextResponse.json<ApiResponse<null>>({
           error: 'Player not found in this game'
         }, { status: 404 });
+      }
+
+      // 자동 시작 타이머 확인 (메모리 모드)
+      let autoStartTime = null;
+      if (memoryGameRoom.current_phase === 'waiting') {
+        const hasMinPlayers = players.length >= 2;
+        const allPlayersReady = players.every((p: any) => p.is_ready);
+        
+        if (hasMinPlayers && allPlayersReady) {
+          // 모든 플레이어가 준비완료인 경우, 자동 시작 시간 설정
+          if (!memoryGameRoom.phase_start_time) {
+            // 자동 시작 시간이 설정되지 않은 경우 설정
+            const startTime = new Date().toISOString();
+            memoryGameRoom.phase_start_time = startTime;
+            autoStartTime = startTime;
+          } else {
+            autoStartTime = memoryGameRoom.phase_start_time;
+          }
+        } else {
+          // 조건이 맞지 않으면 자동 시작 시간 제거
+          if (memoryGameRoom.phase_start_time) {
+            memoryGameRoom.phase_start_time = undefined;
+          }
+        }
       }
 
       let currentRound = null;
@@ -207,7 +263,8 @@ export async function GET(
         airplanes: airplanes?.length,
         myCards: myCards?.length,
         myActions: myActions?.length,
-        allPlayerActions: allPlayerActions?.length
+        allPlayerActions: allPlayerActions?.length,
+        autoStartTime
       });
 
       return NextResponse.json<ApiResponse<any>>({
@@ -220,6 +277,7 @@ export async function GET(
           myCards,
           myActions,
           allPlayerActions,
+          autoStartTime,
           hasActiveTimer: mockGameState.hasActiveTimer(roomCode)
         },
         message: 'Game state retrieved (memory mode - real multiplayer)'

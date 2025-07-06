@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useGameStateWS } from '@/lib/hooks/useGameStateWS';
 import PlayerList from './components/PlayerList';
@@ -24,7 +24,11 @@ export default function GameRoomPage() {
   const [localSelectedCard, setLocalSelectedCard] = useState<string | undefined>(undefined);
 
   // 실시간 게임 상태 (WebSocket)
-  const { gameState, loading, error, isConnected, sendAction, refetch } = useGameStateWS(roomCode, userId);
+  const { gameState, loading, error, isConnected, sendAction, sendCountdownMessage, refetch, countdownState } = useGameStateWS(roomCode, userId);
+
+  // 자동 게임 시작 카운트다운
+  const [autoStartCountdown, setAutoStartCountdown] = useState<number | null>(null);
+  const [autoStartActive, setAutoStartActive] = useState(false);
 
   // Debug logging for game state
   useEffect(() => {
@@ -65,6 +69,87 @@ export default function GameRoomPage() {
     }
   }, [gameState?.gameRoom.current_phase]);
 
+  // 자동 게임 시작 체크
+  useEffect(() => {
+    if (!gameState || !gameState.players) {
+      console.log('[GamePage] No gameState or players');
+      return;
+    }
+    
+    const isWaitingPhase = gameState.gameRoom.current_phase === 'waiting';
+    const hasMinPlayers = gameState.players.length >= 2;
+    const allPlayersReady = gameState.players.every(p => p.is_ready);
+    
+    console.log('[GamePage] Auto start check:', {
+      isWaitingPhase,
+      hasMinPlayers,
+      allPlayersReady,
+      autoStartActive,
+      playersCount: gameState.players.length,
+      readyPlayers: gameState.players.filter(p => p.is_ready).length,
+      players: gameState.players.map(p => ({ username: p.username, is_ready: p.is_ready }))
+    });
+    
+    // 방장만 타이머를 시작하도록 제한
+    const isHost = gameState.players[0]?.user_id === userId;
+    
+    if (isWaitingPhase && hasMinPlayers && allPlayersReady && !autoStartActive && isHost) {
+      console.log('[GamePage] All players ready, starting countdown (host only)...');
+      setAutoStartActive(true);
+      setAutoStartCountdown(5);
+      
+      // 웹소켓을 통해 타이머 시작 알림
+      sendCountdownMessage('countdown_start', 5);
+      
+      const countdownInterval = setInterval(() => {
+        setAutoStartCountdown(prev => {
+          console.log('[GamePage] Countdown:', prev);
+          if (prev === null || prev <= 1) {
+            clearInterval(countdownInterval);
+            setAutoStartActive(false);
+            setAutoStartCountdown(null);
+            console.log('[GamePage] Starting game...');
+            // 게임 시작 API 호출
+            fetch('/api/game/start', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                roomCode,
+                userId
+              }),
+            }).then(response => {
+              if (response.ok) {
+                console.log('[GamePage] Game started successfully');
+                setTimeout(() => refetch(), 500);
+              } else {
+                console.error('Start game failed');
+              }
+            }).catch(error => {
+              console.error('Start game error:', error);
+            });
+            return null;
+          }
+          // 웹소켓을 통해 타이머 업데이트 브로드캐스트
+          const newCountdown = prev - 1;
+          sendCountdownMessage('countdown_update', newCountdown);
+          return newCountdown;
+        });
+      }, 1000);
+      
+      return () => {
+        console.log('[GamePage] Clearing countdown interval');
+        clearInterval(countdownInterval);
+      };
+    } else if (isWaitingPhase && (!hasMinPlayers || !allPlayersReady) && autoStartActive) {
+      // 조건이 더 이상 만족되지 않으면 카운트다운 중지
+      console.log('[GamePage] Conditions no longer met, stopping countdown');
+      setAutoStartActive(false);
+      setAutoStartCountdown(null);
+    }
+  }, [gameState?.players, gameState?.gameRoom.current_phase, autoStartActive, roomCode, userId, refetch]);
+
   // 플레이어 액션 처리 (WebSocket)
   const handlePlayerAction = (actionType: string, airplaneId?: string, cardId?: string) => {
     if (!userId) return;
@@ -86,10 +171,11 @@ export default function GameRoomPage() {
   };
 
   // 게임 시작
-  const handleStartGame = async () => {
+  const handleStartGame = useCallback(async () => {
     if (!userId) return;
 
     try {
+      console.log('[GamePage] Starting game for room:', roomCode);
       const response = await fetch('/api/game/start', {
         method: 'POST',
         headers: {
@@ -102,6 +188,7 @@ export default function GameRoomPage() {
       });
 
       if (response.ok) {
+        console.log('[GamePage] Game started successfully');
         // WebSocket으로 게임 시작 알림
         setTimeout(() => refetch(), 500);
       } else {
@@ -111,7 +198,7 @@ export default function GameRoomPage() {
     } catch (error) {
       console.error('Start game error:', error);
     }
-  };
+  }, [roomCode, userId, refetch]);
 
   // 초기화되지 않았거나 로딩 중일 때
   if (!isInitialized || loading) {
@@ -184,15 +271,23 @@ export default function GameRoomPage() {
               players={gameState.players}
               currentUserId={userId}
               onToggleReady={() => handlePlayerAction('toggle_ready')}
+              autoStartTime={gameState.autoStartTime}
+              roomCode={roomCode}
             />
-            {isHost && (
+            {((autoStartActive && autoStartCountdown !== null) || (countdownState.active && countdownState.countdown !== null)) && (
               <div className="text-center">
-                <button
-                  onClick={handleStartGame}
-                  className="bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-lg text-lg"
-                >
-                  게임 시작
-                </button>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center justify-center space-x-3">
+                    <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                      <span className="text-white font-bold text-sm">
+                        {autoStartCountdown !== null ? autoStartCountdown : countdownState.countdown}
+                      </span>
+                    </div>
+                    <span className="text-green-800 font-semibold text-lg">
+                      {autoStartCountdown !== null ? autoStartCountdown : countdownState.countdown}초 후 게임이 시작됩니다!
+                    </span>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -258,6 +353,8 @@ export default function GameRoomPage() {
             onSelectAirplane={(airplaneId: string) => handlePlayerAction('select_airplane', airplaneId)}
             selectedAirplane={selectedAirplane}
             currentUserId={userId || ''}
+            phaseStartTime={gameState.gameRoom.phase_start_time}
+            roomCode={roomCode}
           />
         );
 
@@ -267,6 +364,7 @@ export default function GameRoomPage() {
             players={gameState.players}
             currentRound={gameState.currentRound}
             phaseStartTime={gameState.gameRoom.phase_start_time}
+            roomCode={roomCode}
           />
         );
 
@@ -314,6 +412,8 @@ export default function GameRoomPage() {
             cards={gameState.myCards || []}
             onSelectCard={handleCardSelection}
             selectedCard={selectedCard}
+            phaseStartTime={gameState.gameRoom.phase_start_time}
+            roomCode={roomCode}
           />
         );
 
@@ -323,6 +423,7 @@ export default function GameRoomPage() {
             roomCode={roomCode}
             userId={userId}
             currentRound={gameState.currentRound}
+            phaseStartTime={gameState.gameRoom.phase_start_time}
           />
         );
 

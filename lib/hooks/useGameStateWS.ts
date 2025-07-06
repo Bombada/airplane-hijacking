@@ -13,6 +13,7 @@ interface GameState {
   myActions?: any[];
   allPlayerActions?: any[];
   hasActiveTimer?: boolean;
+  autoStartTime?: string;
 }
 
 interface UseGameStateWSResult {
@@ -21,13 +22,22 @@ interface UseGameStateWSResult {
   error: string | null;
   isConnected: boolean;
   sendAction: (actionType: string, airplaneId?: string, cardId?: string) => void;
+  sendCountdownMessage: (type: string, countdown?: number) => void;
   refetch: () => Promise<void>;
+  countdownState: {
+    active: boolean;
+    countdown: number | null;
+  };
 }
 
 export function useGameStateWS(roomCode: string, userId: string): UseGameStateWSResult {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [countdownState, setCountdownState] = useState({
+    active: false,
+    countdown: null as number | null
+  });
   
   const { isConnected, sendMessage, lastMessage } = useWebSocket(roomCode, userId);
   const mountedRef = useRef(true);
@@ -121,6 +131,18 @@ export function useGameStateWS(roomCode: string, userId: string): UseGameStateWS
     }
   };
 
+  // Send countdown message via WebSocket
+  const sendCountdownMessage = (type: string, countdown?: number) => {
+    if (!isConnected) return;
+    
+    const wsMessage = {
+      type,
+      countdown
+    };
+    console.log(`[GameStateWS] Sending countdown message:`, wsMessage);
+    sendMessage(wsMessage);
+  };
+
   // Handle WebSocket messages
   useEffect(() => {
     if (!lastMessage) return;
@@ -198,6 +220,24 @@ export function useGameStateWS(roomCode: string, userId: string): UseGameStateWS
           window.location.reload();
         }, 500);
         break;
+
+      case 'countdown_start':
+        console.log('[GameStateWS] Countdown started');
+        setCountdownState({
+          active: true,
+          countdown: lastMessage.countdown || 5
+        });
+        break;
+
+      case 'countdown_update':
+        console.log('[GameStateWS] Countdown update:', lastMessage.countdown);
+        if (lastMessage.countdown !== undefined) {
+          setCountdownState(prev => ({
+            ...prev,
+            countdown: lastMessage.countdown
+          }));
+        }
+        break;
     }
   }, [lastMessage]);
 
@@ -223,6 +263,8 @@ export function useGameStateWS(roomCode: string, userId: string): UseGameStateWS
     error,
     isConnected,
     sendAction,
-    refetch: fetchGameState
+    sendCountdownMessage,
+    refetch: fetchGameState,
+    countdownState
   };
 } 

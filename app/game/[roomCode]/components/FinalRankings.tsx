@@ -16,6 +16,7 @@ interface PlayerRanking {
 export default function FinalRankings({ roomCode }: FinalRankingsProps) {
   const [rankings, setRankings] = useState<PlayerRanking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     fetchFinalRankings();
@@ -35,6 +36,34 @@ export default function FinalRankings({ roomCode }: FinalRankingsProps) {
       console.error('Fetch final rankings error:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleNewGame = async () => {
+    setResetting(true);
+    try {
+      const response = await fetch(`/api/admin/rooms/${roomCode}/reset`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({})
+      });
+
+      if (response.ok) {
+        // 게임방이 리셋되었으므로 페이지를 새로고침하여 새 게임을 시작
+        window.location.reload();
+      } else {
+        console.error('Failed to reset game room');
+        // 리셋 실패 시 메인 페이지로 이동
+        window.location.href = '/';
+      }
+    } catch (error) {
+      console.error('Reset game room error:', error);
+      // 에러 발생 시 메인 페이지로 이동
+      window.location.href = '/';
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -108,10 +137,18 @@ export default function FinalRankings({ roomCode }: FinalRankingsProps) {
             수고하셨습니다.
           </p>
           <button
-            onClick={() => window.location.href = '/'}
-            className="mt-3 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg text-sm"
+            onClick={handleNewGame}
+            disabled={resetting}
+            className="mt-3 px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg text-sm transition-colors"
           >
-            새 게임 시작하기
+            {resetting ? (
+              <div className="flex items-center space-x-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <span>게임 리셋 중...</span>
+              </div>
+            ) : (
+              '새 게임 시작하기'
+            )}
           </button>
         </div>
       </div>

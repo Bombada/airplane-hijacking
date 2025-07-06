@@ -7,18 +7,21 @@ interface ResultsPhaseProps {
   roomCode: string;
   userId: string | null;
   currentRound: any;
+  phaseStartTime: string;  // Add phaseStartTime prop
 }
 
 export default function ResultsPhase({ 
   roomCode, 
   userId, 
-  currentRound 
+  currentRound,
+  phaseStartTime  // Add phaseStartTime parameter
 }: ResultsPhaseProps) {
   const [calculating, setCalculating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [results, setResults] = useState<any>(null);
   const [resultsCalculated, setResultsCalculated] = useState(false);
   const [lastCalculatedRound, setLastCalculatedRound] = useState<number | null>(null);
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);  // Add timer state
 
   const calculateResults = async () => {
     if (!userId || calculating || resultsCalculated) return;
@@ -77,32 +80,56 @@ export default function ResultsPhase({
     }
   }, [userId, resultsCalculated, calculating, currentRound?.round_number]);
 
-  const startNextRound = async () => {
-    if (calculating) return;
+  // Timer logic
+  useEffect(() => {
+    if (!phaseStartTime) {
+      setTimeRemaining(null);
+      return;
+    }
 
-    setCalculating(true);
+    const startTime = new Date(phaseStartTime).getTime();
+    const duration = 15 * 1000; // 15 seconds for results phase
+    const endTime = startTime + duration;
+
+    const timer = setInterval(() => {
+      const now = new Date().getTime();
+      const remaining = Math.max(0, endTime - now);
+      setTimeRemaining(remaining);
+
+      // Only auto-progress when timer expires
+      if (remaining === 0) {
+        handleNextPhase();
+        clearInterval(timer);
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [phaseStartTime]);
+
+  // Function to handle phase transition
+  const handleNextPhase = async () => {
     try {
-      const response = await fetch(`/api/admin/rooms/${roomCode}/next-round`, {
+      const port = window.location.port;
+      const baseUrl = port ? `http://localhost:${port}` : window.location.origin;
+      
+      // If this is the last round, finish the game
+      if (currentRound?.round_number >= 5) {
+        return;
+      }
+
+      // Otherwise, start the next round
+      const response = await fetch(`${baseUrl}/api/admin/rooms/${roomCode}/next-round`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
       });
 
-      const result = await response.json();
-
-      if (response.ok) {
-        // 성공 시 페이지 새로고침하여 새 라운드 상태 반영
-        window.location.reload();
-      } else {
-        console.error('Next round error:', result.error);
-        alert('다음 라운드 시작에 실패했습니다: ' + result.error);
+      if (!response.ok) {
+        console.error('Failed to start next round:', response.status);
       }
     } catch (error) {
-      console.error('Start next round error:', error);
-      alert('다음 라운드 시작 중 오류가 발생했습니다.');
-    } finally {
-      setCalculating(false);
+      console.error('Error starting next round:', error);
     }
   };
 
@@ -117,6 +144,20 @@ export default function ResultsPhase({
       default:
         return { emoji: '❓', name: '알 수 없음', color: 'text-gray-600' };
     }
+  };
+
+  // Timer color based on remaining time
+  const getTimerColor = () => {
+    if (timeRemaining === null) return 'text-gray-500';
+    if (timeRemaining > 10000) return 'text-green-500';
+    if (timeRemaining > 5000) return 'text-yellow-500';
+    return 'text-red-500';
+  };
+
+  // Format time for display
+  const formatTime = (ms: number | null) => {
+    if (ms === null) return '';
+    return `${Math.ceil(ms / 1000)}초`;
   };
 
   if (loading) {
@@ -153,6 +194,12 @@ export default function ResultsPhase({
           🎯 라운드 {currentRound?.round_number} 결과
         </h2>
         <p className="text-gray-600">각 플레이어의 선택과 점수를 확인하세요</p>
+        {/* Add timer display */}
+        {timeRemaining !== null && (
+          <div className={`text-lg font-bold mt-2 ${getTimerColor()}`}>
+            {formatTime(timeRemaining)}
+          </div>
+        )}
       </div>
 
       {/* 라운드 결과 */}
@@ -202,33 +249,19 @@ export default function ResultsPhase({
         </div>
       ) : (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-          {(currentRound?.round_number || 0) < 5 ? (
-            <>
-              <h3 className="font-semibold text-blue-800 mb-2">
-                다음 라운드: {(currentRound?.round_number || 0) + 1}/5
-              </h3>
-              <p className="text-blue-700 mb-4">결과를 확인하고 다음 라운드로 진행하세요.</p>
-              <button
-                onClick={startNextRound}
-                disabled={calculating}
-                className="px-6 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white font-semibold rounded-lg"
-              >
-                {calculating ? '시작 중...' : '다음 라운드 시작'}
-              </button>
-            </>
-          ) : (
-            <>
-              <h3 className="font-semibold text-blue-800 mb-2">
-                🎉 모든 라운드 완료!
-              </h3>
-              <p className="text-blue-700">게임이 종료되었습니다. 최종 결과를 확인하세요.</p>
-            </>
-          )}
+          <h3 className="font-semibold text-blue-800 mb-2">
+            다음 라운드: {(currentRound?.round_number || 0) + 1}/5
+          </h3>
+          <p className="text-blue-700">
+            {timeRemaining !== null ? 
+              `${Math.ceil(timeRemaining / 1000)}초 후 다음 라운드가 시작됩니다.` : 
+              '다음 라운드 준비 중...'}
+          </p>
         </div>
       )}
 
       {/* 라운드 분석 */}
-      <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+      <div className="mt-6">
         <h3 className="font-semibold text-gray-800 mb-3">📊 라운드 분석</h3>
         <div className="text-sm text-gray-600 space-y-1">
           <p>• 각 비행기별 승객 수에 따라 점수가 결정됩니다</p>
