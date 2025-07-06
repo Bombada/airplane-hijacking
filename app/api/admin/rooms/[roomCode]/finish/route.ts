@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseServer } from '@/lib/supabase/server';
+import { supabase } from '@/lib/supabase/server';
 import { ApiResponse } from '@/types/database';
 
 // Function to send WebSocket notification directly
@@ -61,13 +61,13 @@ async function sendGameFinishedNotification(roomCode: string) {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ roomCode: string }> }
+  { params }: { params: { roomCode: string } }
 ) {
   try {
-    const { roomCode } = await params;
+    const { roomCode } = params;
 
     // Get game room
-    const { data: gameRoom, error: roomError } = await supabaseServer
+    const { data: gameRoom, error: roomError } = await supabase
       .from('game_rooms')
       .select('*')
       .eq('room_code', roomCode)
@@ -89,7 +89,7 @@ export async function POST(
     // Before finishing the game, ensure all completed rounds have their scores calculated
     try {
       // Get all completed rounds (rounds where all players have taken actions)
-      const { data: gameRounds, error: roundsError } = await supabaseServer
+      const { data: gameRounds, error: roundsError } = await supabase
         .from('game_rounds')
         .select('*')
         .eq('game_room_id', gameRoom.id)
@@ -99,7 +99,7 @@ export async function POST(
         console.error('Error fetching rounds:', roundsError);
       } else if (gameRounds && gameRounds.length > 0) {
         // Get total players count
-        const { data: players, error: playersError } = await supabaseServer
+        const { data: players, error: playersError } = await supabase
           .from('players')
           .select('id')
           .eq('game_room_id', gameRoom.id);
@@ -110,14 +110,14 @@ export async function POST(
           // Check each round and calculate scores if needed
           for (const round of gameRounds) {
             // Count player actions for this round
-            const { data: playerActions, error: actionsError } = await supabaseServer
+            const { data: playerActions, error: actionsError } = await supabase
               .from('player_actions')
               .select('id')
               .eq('game_round_id', round.id);
 
             if (!actionsError && playerActions && playerActions.length === totalPlayers) {
               // This round is complete, check if results exist
-              const { data: existingResults, error: resultsError } = await supabaseServer
+              const { data: existingResults, error: resultsError } = await supabase
                 .from('round_results')
                 .select('id')
                 .eq('game_round_id', round.id);
@@ -139,7 +139,7 @@ export async function POST(
     }
 
     // Update game room to finished status
-    const { error: updateError } = await supabaseServer
+    const { error: updateError } = await supabase
       .from('game_rooms')
       .update({
         status: 'finished',

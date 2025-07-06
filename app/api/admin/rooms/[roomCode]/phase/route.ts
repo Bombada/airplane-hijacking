@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseServer } from '@/lib/supabase/server';
+import { supabase } from '@/lib/supabase/server';
 
 interface ApiResponse<T> {
   success?: boolean;
@@ -66,10 +66,10 @@ async function sendPhaseChangeNotification(roomCode: string, phase: string) {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ roomCode: string }> }
+  { params }: { params: { roomCode: string } }
 ) {
   try {
-    const { roomCode } = await params;
+    const { roomCode } = params;
     const { phase } = await request.json();
 
     if (!phase) {
@@ -89,7 +89,7 @@ export async function POST(
     }
 
     // Get the game room
-    const { data: gameRoom, error: roomError } = await supabaseServer
+    const { data: gameRoom, error: roomError } = await supabase
       .from('game_rooms')
       .select('*')
       .eq('room_code', roomCode)
@@ -103,7 +103,7 @@ export async function POST(
     }
 
     // Update the game room phase
-    const { error: updateError } = await supabaseServer
+    const { error: updateError } = await supabase
       .from('game_rooms')
       .update({ 
         current_phase: phase,
@@ -121,7 +121,7 @@ export async function POST(
     }
 
     // Also update the current round phase if it exists
-    const { error: roundUpdateError } = await supabaseServer
+    const { error: roundUpdateError } = await supabase
       .from('game_rounds')
       .update({ phase })
       .eq('game_room_id', gameRoom.id)

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseServer } from '@/lib/supabase/server';
+import { supabase } from '@/lib/supabase/server';
 import { ApiResponse } from '@/types/database';
 import mockGameState from '@/lib/game/mockGameState';
 
@@ -27,7 +27,7 @@ export async function GET(
 
     try {
       // Try to get game room info from Supabase
-      const { data: gameRoom, error: roomError } = await supabaseServer
+      const { data: gameRoom, error: roomError } = await supabase
         .from('game_rooms')
         .select('*')
         .eq('room_code', roomCode)
@@ -38,7 +38,7 @@ export async function GET(
       }
 
       // Get players list
-      const { data: players, error: playersError } = await supabaseServer
+      const { data: players, error: playersError } = await supabase
         .from('players')
         .select('*')
         .eq('game_room_id', gameRoom.id);
@@ -67,7 +67,7 @@ export async function GET(
           if (!gameRoom.phase_start_time) {
             // 자동 시작 시간이 설정되지 않은 경우 설정
             const startTime = new Date().toISOString();
-            await supabaseServer
+            await supabase
               .from('game_rooms')
               .update({ phase_start_time: startTime })
               .eq('id', gameRoom.id);
@@ -78,7 +78,7 @@ export async function GET(
         } else {
           // 조건이 맞지 않으면 자동 시작 시간 제거
           if (gameRoom.phase_start_time) {
-            await supabaseServer
+            await supabase
               .from('game_rooms')
               .update({ phase_start_time: null })
               .eq('id', gameRoom.id);
@@ -95,7 +95,7 @@ export async function GET(
       // Get additional info if game is playing
       if (gameRoom.status === 'playing' && gameRoom.current_round > 0) {
         // Current round info
-        const { data: roundData, error: roundError } = await supabaseServer
+        const { data: roundData, error: roundError } = await supabase
           .from('game_rounds')
           .select('*')
           .eq('game_room_id', gameRoom.id)
@@ -108,7 +108,7 @@ export async function GET(
 
         // Airplane info
         if (currentRound) {
-          const { data: airplaneData } = await supabaseServer
+          const { data: airplaneData } = await supabase
             .from('airplanes')
             .select('*')
             .eq('game_round_id', currentRound.id)
@@ -120,7 +120,7 @@ export async function GET(
         }
 
         // My cards info - only show unused cards
-        const { data: cardData } = await supabaseServer
+        const { data: cardData } = await supabase
           .from('player_cards')
           .select('*')
           .eq('player_id', currentPlayer.id)
@@ -137,7 +137,7 @@ export async function GET(
 
         // My actions info (current round)
         if (currentRound) {
-          const { data: actionData } = await supabaseServer
+          const { data: actionData } = await supabase
             .from('player_actions')
             .select('*')
             .eq('player_id', currentPlayer.id)
@@ -146,7 +146,7 @@ export async function GET(
           myActions = actionData;
           
           // Get all player actions for this round
-          const { data: allActionData } = await supabaseServer
+          const { data: allActionData } = await supabase
             .from('player_actions')
             .select('*')
             .eq('game_round_id', currentRound.id);

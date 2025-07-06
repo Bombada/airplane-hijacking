@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseServer } from '@/lib/supabase/server';
+import { supabase } from '@/lib/supabase/server';
 
 interface RouteParams {
   params: { roomCode: string };
@@ -66,7 +66,7 @@ async function sendAdminStateChangeNotification(roomCode: string, action: string
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { roomCode } = await params;
-    const supabase = supabaseServer;
+    const supabase = supabase;
 
     // Get room details
     const { data: room, error: roomError } = await supabase

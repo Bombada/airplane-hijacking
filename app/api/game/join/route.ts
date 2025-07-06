@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseServer } from '@/lib/supabase/server';
+import { supabase } from '@/lib/supabase/server';
 import { validateRoomCode } from '@/lib/utils/roomCode';
 import { ApiResponse, GameRoom, Player } from '@/types/database';
 import mockGameState from '@/lib/game/mockGameState';
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
 
     try {
       // Try Supabase first
-      const { data: gameRoom, error: roomError } = await supabaseServer
+      const { data: gameRoom, error: roomError } = await supabase
         .from('game_rooms')
         .select('*')
         .eq('room_code', roomCode.toUpperCase())
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Check current player count
-      const { data: existingPlayers, error: playersError } = await supabaseServer
+      const { data: existingPlayers, error: playersError } = await supabase
         .from('players')
         .select('id')
         .eq('game_room_id', gameRoom.id);
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Check if user already joined
-      const { data: existingPlayer } = await supabaseServer
+      const { data: existingPlayer } = await supabase
         .from('players')
         .select('id')
         .eq('game_room_id', gameRoom.id)
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Add player
-      const { data: player, error: playerError } = await supabaseServer
+      const { data: player, error: playerError } = await supabase
         .from('players')
         .insert({
           game_room_id: gameRoom.id,

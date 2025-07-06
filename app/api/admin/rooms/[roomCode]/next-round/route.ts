@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseServer } from '@/lib/supabase/server';
+import { supabase } from '@/lib/supabase/server';
 import { ApiResponse } from '@/types/database';
 import WebSocket from 'ws';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ roomCode: string }> }
+  { params }: { params: { roomCode: string } }
 ) {
   try {
-    const { roomCode } = await params;
+    const { roomCode } = params;
 
     // Get game room
-    const { data: gameRoom, error: roomError } = await supabaseServer
+    const { data: gameRoom, error: roomError } =  await supabase
       .from('game_rooms')
       .select('*')
       .eq('room_code', roomCode)
@@ -41,7 +41,7 @@ export async function POST(
     const nextRound = gameRoom.current_round + 1;
     
     // Create new round
-    const { data: newRound, error: newRoundError } = await supabaseServer
+    const { data: newRound, error: newRoundError } = await supabase
       .from('game_rounds')
       .insert({
         game_room_id: gameRoom.id,
@@ -63,7 +63,7 @@ export async function POST(
       airplane_number: num
     }));
 
-    const { error: airplanesError } = await supabaseServer
+    const { error: airplanesError } = await supabase
       .from('airplanes')
       .insert(airplaneInserts);
 
@@ -74,7 +74,7 @@ export async function POST(
     }
 
     // Update game room
-    const { error: updateError } = await supabaseServer
+    const { error: updateError } = await supabase
       .from('game_rooms')
       .update({
         current_round: nextRound,

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseServer } from '@/lib/supabase/server';
+import { supabase } from '@/lib/supabase/server';
 
 interface GameRoom {
   id: string;
@@ -15,7 +15,7 @@ interface GameRoom {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = supabaseServer;
+    // use supabase directly
 
     // Fetch all game rooms
     const { data: rooms, error: roomsError } = await supabase

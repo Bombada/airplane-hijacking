@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseServer } from '@/lib/supabase/server';
+import { supabase } from '@/lib/supabase/server';
 import { ApiResponse } from '@/types/database';
 import mockGameState from '@/lib/game/mockGameState';
 
@@ -19,7 +19,7 @@ export async function POST(
 
     try {
       // Check game room
-      const { data: gameRoom, error: roomError } = await supabaseServer
+      const { data: gameRoom, error: roomError } = await supabase
         .from('game_rooms')
         .select('*')
         .eq('room_code', roomCode)
@@ -30,7 +30,7 @@ export async function POST(
       }
 
       // Check player
-      const { data: player, error: playerError } = await supabaseServer
+      const { data: player, error: playerError } = await supabase
         .from('players')
         .select('*')
         .eq('game_room_id', gameRoom.id)
@@ -46,7 +46,7 @@ export async function POST(
       // Get current round (only if game is playing and has started)
       let currentRound = null;
       if (gameRoom.status === 'playing' && gameRoom.current_round > 0) {
-        const { data: roundData } = await supabaseServer
+        const { data: roundData } = await supabase
           .from('game_rounds')
           .select('*')
           .eq('game_room_id', gameRoom.id)
@@ -65,7 +65,7 @@ export async function POST(
       switch (actionType) {
         case 'toggle_ready':
           // Toggle ready status
-          const { error: readyError } = await supabaseServer
+          const { error: readyError } = await supabase
             .from('players')
             .update({ is_ready: !player.is_ready })
             .eq('id', player.id);
@@ -107,7 +107,7 @@ export async function POST(
             currentRound: currentRound ? 'exists' : 'null'
           });
 
-          const { error: airplaneError } = await supabaseServer
+          const { error: airplaneError } = await supabase
             .from('player_actions')
             .upsert({
               player_id: player.id,
@@ -145,7 +145,7 @@ export async function POST(
           }
 
           // Check if player already has an action for this round
-          const { data: existingAction } = await supabaseServer
+          const { data: existingAction } = await supabase
             .from('player_actions')
             .select('*')
             .eq('player_id', player.id)
@@ -159,7 +159,7 @@ export async function POST(
           }
 
           // Check if the card belongs to the player and is not already used
-          const { data: selectedCard, error: cardCheckError } = await supabaseServer
+          const { data: selectedCard, error: cardCheckError } = await supabase
             .from('player_cards')
             .select('*')
             .eq('id', cardId)
@@ -187,7 +187,7 @@ export async function POST(
 
           // Update the existing action with card selection
           // Note: We don't mark the card as used here, only during results calculation
-          const { error: cardError } = await supabaseServer
+          const { error: cardError } = await supabase
             .from('player_actions')
             .update({
               action_type: 'select_card',

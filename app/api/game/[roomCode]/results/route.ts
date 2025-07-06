@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseServer } from '@/lib/supabase/server';
+import { supabase } from '@/lib/supabase/server';
 import { calculateRoundScore, applyHijackerEffect, isGameFinished } from '@/lib/game/gameLogic';
 import { ApiResponse } from '@/types/database';
 import mockGameState from '@/lib/game/mockGameState';
@@ -20,7 +20,7 @@ export async function POST(
 
     try {
       // Check game room
-      const { data: gameRoom, error: roomError } = await supabaseServer
+      const { data: gameRoom, error: roomError } = await supabase
         .from('game_rooms')
         .select('*')
         .eq('room_code', roomCode)
@@ -47,7 +47,7 @@ export async function POST(
       }
 
       // Get current round
-      const { data: currentRound, error: roundError } = await supabaseServer
+      const { data: currentRound, error: roundError } = await supabase
         .from('game_rounds')
         .select('*')
         .eq('game_room_id', gameRoom.id)
@@ -61,7 +61,7 @@ export async function POST(
       }
 
       // Check if round results already exist to prevent duplicate processing
-      const { data: existingRoundResults, error: checkError } = await supabaseServer
+      const { data: existingRoundResults, error: checkError } = await supabase
         .from('round_results')
         .select('player_id')
         .eq('game_round_id', currentRound.id)
@@ -79,7 +79,7 @@ export async function POST(
         console.log(`[Results API] Round results already exist for round ${currentRound.round_number}, returning existing results`);
         
         // Get existing results for response
-        const { data: existingResults } = await supabaseServer
+        const { data: existingResults } = await supabase
           .from('round_results')
           .select(`
             *,
@@ -108,7 +108,7 @@ export async function POST(
       }
 
       // Get all player actions
-      const { data: playerActions, error: actionsError } = await supabaseServer
+      const { data: playerActions, error: actionsError } = await supabase
         .from('player_actions')
         .select(`
           *,
@@ -173,7 +173,7 @@ export async function POST(
       }));
 
       // Insert new round results
-      const { data: insertData, error: resultsError } = await supabaseServer
+      const { data: insertData, error: resultsError } = await supabase
         .from('round_results')
         .insert(roundResults)
         .select();
@@ -184,7 +184,7 @@ export async function POST(
           console.log(`[Results API] Round results already processed by another request for round ${currentRound.round_number}`);
           
           // Return existing results
-          const { data: existingResults } = await supabaseServer
+          const { data: existingResults } = await supabase
             .from('round_results')
             .select(`
               *,
@@ -227,7 +227,7 @@ export async function POST(
         .map((action: any) => action.selected_card_id);
       
       if (usedCardIds.length > 0) {
-        const { error: markCardsError } = await supabaseServer
+        const { error: markCardsError } = await supabase
           .from('player_cards')
           .update({ is_used: true })
           .in('id', usedCardIds);
@@ -251,7 +251,7 @@ export async function POST(
         console.log(`[Results API] Adding ${totalScoreToAdd} points to player ${playerId}`);
         
         // Get current score and update atomically
-        const { data: currentPlayer, error: getError } = await supabaseServer
+        const { data: currentPlayer, error: getError } = await supabase
           .from('players')
           .select('total_score')
           .eq('id', playerId)
@@ -264,7 +264,7 @@ export async function POST(
         
         const newScore = currentPlayer.total_score + totalScoreToAdd;
         
-        const { error: updateError } = await supabaseServer
+        const { error: updateError } = await supabase
           .from('players')
           .update({
             total_score: newScore
@@ -283,7 +283,7 @@ export async function POST(
       
       if (isFinished) {
         // End game
-        await supabaseServer
+        await supabase
           .from('game_rooms')
           .update({
             status: 'finished',
@@ -292,7 +292,7 @@ export async function POST(
           .eq('id', gameRoom.id);
       } else {
         // Keep current round and phase at results - don't auto-proceed
-        await supabaseServer
+        await supabase
           .from('game_rooms')
           .update({
             current_phase: 'results'

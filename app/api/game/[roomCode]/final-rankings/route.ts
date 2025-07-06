@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseServer } from '@/lib/supabase/server';
+import { supabase } from '@/lib/supabase/server';
 import { ApiResponse } from '@/types/database';
 
 interface PlayerRanking {
@@ -18,7 +18,7 @@ export async function GET(
 
     try {
       // Check game room
-      const { data: gameRoom, error: roomError } = await supabaseServer
+      const { data: gameRoom, error: roomError } = await supabase
         .from('game_rooms')
         .select('*')
         .eq('room_code', roomCode)
@@ -46,7 +46,7 @@ export async function GET(
       }
 
       // Get all players with their total scores
-      const { data: players, error: playersError } = await supabaseServer
+      const { data: players, error: playersError } = await supabase
         .from('players')
         .select('id, username, total_score')
         .eq('game_room_id', gameRoom.id)

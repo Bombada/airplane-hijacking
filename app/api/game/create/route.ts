@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseServer } from '@/lib/supabase/server';
+import { supabase } from '@/lib/supabase/server';
 import { generateRoomCode } from '@/lib/utils/roomCode';
 import { ApiResponse, GameRoom } from '@/types/database';
 import mockGameState from '@/lib/game/mockGameState';
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       roomCode = generateRoomCode();
       
       try {
-        const { data: existingRoom } = await supabaseServer
+        const { data: existingRoom } = await supabase
           .from('game_rooms')
           .select('room_code')
           .eq('room_code', roomCode)
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     try {
       // Try to create game room in Supabase
-      const { data: gameRoom, error: roomError } = await supabaseServer
+      const { data: gameRoom, error: roomError } = await supabase
         .from('game_rooms')
         .insert({
           room_code: roomCode!,
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Add player as host
-      const { data: player, error: playerError } = await supabaseServer
+      const { data: player, error: playerError } = await supabase
         .from('players')
         .insert({
           game_room_id: gameRoom.id,
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
 
       if (playerError) {
         // Clean up created room
-        await supabaseServer.from('game_rooms').delete().eq('id', gameRoom.id);
+        await supabase.from('game_rooms').delete().eq('id', gameRoom.id);
         throw new Error(`Player creation error: ${playerError.message}`);
       }
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseServer } from '@/lib/supabase/server';
+import { supabase } from '@/lib/supabase/server';
 
 interface RouteParams {
   params: { roomCode: string };
@@ -8,7 +8,6 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { roomCode } = await params;
-    const supabase = supabaseServer;
 
     // Fetch room details
     const { data: room, error: roomError } = await supabase
@@ -113,7 +112,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const { roomCode } = await params;
-    const supabase = supabaseServer;
 
     // Get room ID first
     const { data: room, error: roomError } = await supabase

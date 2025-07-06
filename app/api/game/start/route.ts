@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseServer } from '@/lib/supabase/server';
+import { supabase } from '@/lib/supabase/server';
 import { generatePlayerCards, generateAirplaneNumbers } from '@/lib/game/gameLogic';
 import { ApiResponse } from '@/types/database';
 import mockGameState from '@/lib/game/mockGameState';
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
 
     try {
       // Check game room and host permissions
-      const { data: gameRoom, error: roomError } = await supabaseServer
+      const { data: gameRoom, error: roomError } = await supabase
         .from('game_rooms')
         .select(`
           *,
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Check if user is the host (first player)
-      const { data: players, error: playersError } = await supabaseServer
+      const { data: players, error: playersError } = await supabase
         .from('players')
         .select('*')
         .eq('game_room_id', gameRoom.id);
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Clear existing cards for all players in this game
-      const { error: clearCardsError } = await supabaseServer
+      const { error: clearCardsError } = await supabase
         .from('player_cards')
         .delete()
         .in('player_id', players.map(p => p.id));
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const { error: cardsError } = await supabaseServer
+      const { error: cardsError } = await supabase
         .from('player_cards')
         .insert(cardInserts);
 
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Create first round
-      const { data: round, error: roundError } = await supabaseServer
+      const { data: round, error: roundError } = await supabase
         .from('game_rounds')
         .insert({
           game_room_id: gameRoom.id,
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
         airplane_number: num
       }));
 
-      const { error: airplanesError } = await supabaseServer
+      const { error: airplanesError } = await supabase
         .from('airplanes')
         .insert(airplaneInserts);
 
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Update game room status
-      const { data: updatedRoom, error: updateError } = await supabaseServer
+      const { data: updatedRoom, error: updateError } = await supabase
         .from('game_rooms')
         .update({
           status: 'playing',

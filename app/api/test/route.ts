@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseServer } from '@/lib/supabase/server';
+import { supabase } from '@/lib/supabase/server';
 
 export async function GET() {
   try {
     // Test basic connection - just try to access the database
-    const { data, error } = await supabaseServer
+    const { data, error } = await supabase
       .from('game_rooms')
       .select('*')
       .limit(1);
