@@ -59,6 +59,53 @@ export async function POST(
         }, { status: 404 });
       }
 
+      // Check if round results already exist to prevent duplicate processing
+      const { data: existingRoundResults, error: checkError } = await supabaseServer
+        .from('round_results')
+        .select('player_id')
+        .eq('game_round_id', currentRound.id)
+        .limit(1);
+
+      if (checkError) {
+        console.error('Error checking existing round results:', checkError);
+        return NextResponse.json<ApiResponse<null>>({
+          error: 'Failed to check existing round results'
+        }, { status: 500 });
+      }
+
+      // If round results already exist, return them without updating scores
+      if (existingRoundResults && existingRoundResults.length > 0) {
+        console.log(`[Results API] Round results already exist for round ${currentRound.round_number}, returning existing results`);
+        
+        // Get existing results for response
+        const { data: existingResults } = await supabaseServer
+          .from('round_results')
+          .select(`
+            *,
+            players!inner(username)
+          `)
+          .eq('game_round_id', currentRound.id);
+
+        const formattedResults = existingResults?.map(result => ({
+          playerId: result.player_id,
+          username: result.players.username,
+          airplaneNumber: result.airplane_number,
+          cardType: result.card_type,
+          finalScore: result.round_score
+        })) || [];
+
+        const isFinished = isGameFinished(gameRoom.current_round);
+        
+        return NextResponse.json<ApiResponse<any>>({
+          data: {
+            roundResults: formattedResults,
+            gameFinished: isFinished,
+            nextRound: isFinished ? null : gameRoom.current_round + 1
+          },
+          message: 'Round results retrieved (already calculated)'
+        });
+      }
+
       // Get all player actions
       const { data: playerActions, error: actionsError } = await supabaseServer
         .from('player_actions')
@@ -70,10 +117,21 @@ export async function POST(
         `)
         .eq('game_round_id', currentRound.id);
 
-      if (actionsError || !playerActions) {
+      if (actionsError) {
+        console.error('Player actions error:', actionsError);
         return NextResponse.json<ApiResponse<null>>({
-          error: 'Failed to get player actions'
+          error: 'Failed to get player actions: ' + actionsError.message
         }, { status: 500 });
+      }
+
+      if (!playerActions || playerActions.length === 0) {
+        console.error('No player actions found for round:', currentRound.id);
+        console.error('Game room:', gameRoom);
+        console.error('Current round:', currentRound);
+        console.error('Player actions query result:', playerActions);
+        return NextResponse.json<ApiResponse<null>>({
+          error: `No player actions found for this round. Room: ${roomCode}, Round: ${currentRound.round_number}, Phase: ${gameRoom.current_phase}`
+        }, { status: 404 });
       }
 
       // Calculate passengers per airplane
@@ -104,7 +162,7 @@ export async function POST(
       // Apply hijacker effects
       const finalScores = applyHijackerEffect(playerScores);
 
-      // Save round results
+      // Save round results using insert (not upsert) to ensure atomicity
       const roundResults = finalScores.map(score => ({
         game_round_id: currentRound.id,
         player_id: score.playerId,
@@ -113,33 +171,91 @@ export async function POST(
         round_score: score.finalScore
       }));
 
-      const { error: resultsError } = await supabaseServer
+      // Insert new round results
+      const { data: insertData, error: resultsError } = await supabaseServer
         .from('round_results')
-        .insert(roundResults);
+        .insert(roundResults)
+        .select();
 
       if (resultsError) {
+        // If error is due to duplicate key, another request already processed this round
+        if (resultsError.code === '23505') { // PostgreSQL unique constraint violation
+          console.log(`[Results API] Round results already processed by another request for round ${currentRound.round_number}`);
+          
+          // Return existing results
+          const { data: existingResults } = await supabaseServer
+            .from('round_results')
+            .select(`
+              *,
+              players!inner(username)
+            `)
+            .eq('game_round_id', currentRound.id);
+
+          const formattedResults = existingResults?.map(result => ({
+            playerId: result.player_id,
+            username: result.players.username,
+            airplaneNumber: result.airplane_number,
+            cardType: result.card_type,
+            finalScore: result.round_score
+          })) || [];
+
+          const isFinished = isGameFinished(gameRoom.current_round);
+          
+          return NextResponse.json<ApiResponse<any>>({
+            data: {
+              roundResults: formattedResults,
+              gameFinished: isFinished,
+              nextRound: isFinished ? null : gameRoom.current_round + 1
+            },
+            message: 'Round results retrieved (processed by another request)'
+          });
+        }
+        
         console.error('Results save error:', resultsError);
         return NextResponse.json<ApiResponse<null>>({
           error: 'Failed to save round results'
         }, { status: 500 });
       }
 
-      // Update player total scores
-      for (const score of finalScores) {
-        // Get current score and add
-        const { data: player } = await supabaseServer
+      // Only update player scores if new records were successfully created
+      console.log(`[Results API] New round results created, updating player scores for round ${currentRound.round_number}`);
+      
+      // Group scores by player to handle multiple actions per player
+      const playerScoresMap = new Map<string, number>();
+      finalScores.forEach(score => {
+        const currentTotal = playerScoresMap.get(score.playerId) || 0;
+        playerScoresMap.set(score.playerId, currentTotal + score.finalScore);
+      });
+      
+      // Update each player's total score
+      for (const [playerId, totalScoreToAdd] of playerScoresMap) {
+        console.log(`[Results API] Adding ${totalScoreToAdd} points to player ${playerId}`);
+        
+        // Get current score and update atomically
+        const { data: currentPlayer, error: getError } = await supabaseServer
           .from('players')
           .select('total_score')
-          .eq('id', score.playerId)
+          .eq('id', playerId)
           .single();
+          
+        if (getError || !currentPlayer) {
+          console.error(`[Results API] Failed to get current score for player ${playerId}:`, getError);
+          continue;
+        }
         
-        if (player) {
-          await supabaseServer
-            .from('players')
-            .update({
-              total_score: player.total_score + score.finalScore
-            })
-            .eq('id', score.playerId);
+        const newScore = currentPlayer.total_score + totalScoreToAdd;
+        
+        const { error: updateError } = await supabaseServer
+          .from('players')
+          .update({
+            total_score: newScore
+          })
+          .eq('id', playerId);
+          
+        if (updateError) {
+          console.error(`[Results API] Failed to update score for player ${playerId}:`, updateError);
+        } else {
+          console.log(`[Results API] Successfully updated player ${playerId} score: ${currentPlayer.total_score} -> ${newScore}`);
         }
       }
 
@@ -156,39 +272,11 @@ export async function POST(
           })
           .eq('id', gameRoom.id);
       } else {
-        // Proceed to next round
-        const nextRound = gameRoom.current_round + 1;
-        
-        // Create new round
-        const { data: newRound } = await supabaseServer
-          .from('game_rounds')
-          .insert({
-            game_room_id: gameRoom.id,
-            round_number: nextRound,
-            phase: 'airplane_selection'
-          })
-          .select()
-          .single();
-
-        if (newRound) {
-          // Create new airplanes
-          const airplaneInserts = [1, 2, 3, 4].map(num => ({
-            game_round_id: newRound.id,
-            airplane_number: num
-          }));
-
-          await supabaseServer
-            .from('airplanes')
-            .insert(airplaneInserts);
-        }
-
-        // Update game room
+        // Keep current round and phase at results - don't auto-proceed
         await supabaseServer
           .from('game_rooms')
           .update({
-            current_round: nextRound,
-            current_phase: 'airplane_selection',
-            phase_start_time: new Date().toISOString()
+            current_phase: 'results'
           })
           .eq('id', gameRoom.id);
       }

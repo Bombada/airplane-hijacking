@@ -33,7 +33,7 @@ export function useGameStateWS(roomCode: string, userId: string): UseGameStateWS
   const mountedRef = useRef(true);
 
   // Fetch initial game state
-  const fetchGameState = async () => {
+  const fetchGameState = async (shouldBroadcast: boolean = false) => {
     if (!mountedRef.current || !userId) return;
     
     try {
@@ -54,14 +54,15 @@ export function useGameStateWS(roomCode: string, userId: string): UseGameStateWS
         setError(null);
         setLoading(false);
         
-        // Broadcast updated game state to other clients (they will receive it and update their UI)
-        const wsMessage = {
-          type: 'game_state_update',
-          gameState: result.data
-        };
-        console.log(`[GameStateWS] Broadcasting game state update, connected: ${isConnected}`);
-        console.log(`[GameStateWS] WebSocket message:`, wsMessage);
-        sendMessage(wsMessage);
+        // Only broadcast if explicitly requested (e.g., after player actions)
+        if (shouldBroadcast && isConnected) {
+          const wsMessage = {
+            type: 'game_state_update',
+            gameState: result.data
+          };
+          console.log(`[GameStateWS] Broadcasting game state update`);
+          sendMessage(wsMessage);
+        }
       } else if (result.error) {
         throw new Error(result.error);
       }
@@ -111,7 +112,7 @@ export function useGameStateWS(roomCode: string, userId: string): UseGameStateWS
         
         // Fetch updated state for current user
         console.log(`[GameStateWS] Fetching updated state...`);
-        setTimeout(() => fetchGameState(), 100);
+        setTimeout(() => fetchGameState(true), 100);
       } else {
         console.error('[GameStateWS] Action failed:', response.status);
       }
@@ -134,16 +135,30 @@ export function useGameStateWS(roomCode: string, userId: string): UseGameStateWS
 
       case 'player_action':
         console.log('[GameStateWS] Received player action from another user:', lastMessage.action);
-        // Always refresh game state when receiving player actions
-        setTimeout(() => fetchGameState(), 100);
+        // Skip state refresh during card selection and results phase to prevent UI flickering
+        const currentPhase = gameState?.gameRoom?.current_phase;
+        if (currentPhase !== 'card_selection' && currentPhase !== 'results') {
+          console.log('[GameStateWS] Refreshing game state for player action');
+          setTimeout(() => fetchGameState(), 100);
+        } else {
+          console.log('[GameStateWS] Skipping state refresh during card selection/results phase');
+        }
         break;
 
       case 'game_state_update':
         console.log('[GameStateWS] Received game state update');
-        // Accept game state updates to keep UI in sync
+        // Skip game state updates during card selection and results phase to prevent UI flickering
         if (lastMessage.gameState) {
-          console.log('[GameStateWS] Updating game state from WebSocket');
-          setGameState(lastMessage.gameState);
+          const currentPhase = gameState?.gameRoom?.current_phase;
+          const newPhase = lastMessage.gameState?.gameRoom?.current_phase;
+          
+          // Only update if phase changed or not in sensitive phases
+          if (currentPhase !== newPhase || (newPhase !== 'card_selection' && newPhase !== 'results')) {
+            console.log('[GameStateWS] Updating game state from WebSocket');
+            setGameState(lastMessage.gameState);
+          } else {
+            console.log('[GameStateWS] Skipping game state update during card selection/results phase');
+          }
         }
         break;
 
@@ -151,6 +166,37 @@ export function useGameStateWS(roomCode: string, userId: string): UseGameStateWS
       case 'user_left':
         console.log('[GameStateWS] User joined/left, refreshing state');
         setTimeout(() => fetchGameState(), 100);
+        break;
+
+      case 'phase_change':
+        console.log('[GameStateWS] Phase changed to:', lastMessage.phase);
+        // Immediately refresh game state when phase changes
+        setTimeout(() => fetchGameState(), 100);
+        // Also reload the page to ensure clean state
+        console.log('[GameStateWS] Reloading page due to admin phase change');
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+        break;
+
+      case 'game_finished':
+        console.log('[GameStateWS] Game finished:', lastMessage.message);
+        // Immediately refresh game state when game is finished
+        setTimeout(() => fetchGameState(), 100);
+        // Also reload the page to ensure clean state
+        console.log('[GameStateWS] Reloading page due to game finish');
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+        break;
+
+      case 'admin_state_change':
+        console.log('[GameStateWS] Admin state change detected:', lastMessage);
+        // Reload page when admin makes any state changes
+        console.log('[GameStateWS] Reloading page due to admin state change');
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
         break;
     }
   }, [lastMessage]);

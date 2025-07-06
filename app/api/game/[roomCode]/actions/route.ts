@@ -138,10 +138,31 @@ export async function POST(
             }, { status: 400 });
           }
 
-          // Select card
+          if (!currentRound) {
+            return NextResponse.json<ApiResponse<null>>({
+              error: 'No active round found for card selection'
+            }, { status: 400 });
+          }
+
+          // Check if player already has an action for this round
+          const { data: existingAction } = await supabaseServer
+            .from('player_actions')
+            .select('*')
+            .eq('player_id', player.id)
+            .eq('game_round_id', currentRound.id)
+            .single();
+
+          if (!existingAction) {
+            return NextResponse.json<ApiResponse<null>>({
+              error: 'Must select airplane before selecting card'
+            }, { status: 400 });
+          }
+
+          // Update the existing action with card selection (allow changing card selection)
           const { error: cardError } = await supabaseServer
             .from('player_actions')
             .update({
+              action_type: 'select_card',
               selected_card_id: cardId,
               action_time: new Date().toISOString()
             })
@@ -154,12 +175,9 @@ export async function POST(
             }, { status: 500 });
           }
 
-          // Mark card as used
-          await supabaseServer
-            .from('player_cards')
-            .update({ is_used: true })
-            .eq('id', cardId);
-
+          // NOTE: Don't mark card as used yet - wait until round ends
+          // This allows players to see their cards during the round
+          
           return NextResponse.json<ApiResponse<null>>({
             message: 'Card selected'
           });

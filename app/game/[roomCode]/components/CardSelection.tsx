@@ -5,35 +5,16 @@ interface Card {
   card_type: 'passenger' | 'follower' | 'hijacker';
 }
 
-interface Player {
-  id: string;
-  user_id: string;
-  username: string;
-}
-
-interface PlayerAction {
-  id: string;
-  player_id: string;
-  action_type: string;
-  selected_card_id?: string;
-}
-
 interface CardSelectionProps {
   cards: Card[];
-  players: Player[];
-  allPlayerActions: PlayerAction[];
   onSelectCard: (cardId: string) => void;
   selectedCard?: string;
-  currentUserId: string;
 }
 
 export default function CardSelection({ 
   cards, 
-  players,
-  allPlayerActions,
   onSelectCard, 
-  selectedCard,
-  currentUserId
+  selectedCard
 }: CardSelectionProps) {
   
   const getCardInfo = (type: string) => {
@@ -77,17 +58,12 @@ export default function CardSelection({
     }
   };
 
-  // Get players who haven't selected cards yet
-  const getPlayersNotSelectedCard = () => {
-    const playersWithCardActions = allPlayerActions
-      .filter(action => action.action_type === 'select_card')
-      .map(action => action.player_id);
-    
-    return players.filter(player => !playersWithCardActions.includes(player.id));
-  };
+  // Only track current user's card selection - no need to sync other players' selections
+  const hasSelectedCard = !!selectedCard;
 
-  const playersNotSelectedCard = getPlayersNotSelectedCard();
-
+  // Fixed order for card types to prevent reordering
+  const cardTypeOrder = ['passenger', 'follower', 'hijacker'] as const;
+  
   const groupedCards = cards.reduce((acc, card) => {
     if (!acc[card.card_type]) {
       acc[card.card_type] = [];
@@ -96,6 +72,11 @@ export default function CardSelection({
     return acc;
   }, {} as Record<string, Card[]>);
 
+  // Sort each group by card ID to maintain consistent order within each type
+  Object.keys(groupedCards).forEach(cardType => {
+    groupedCards[cardType].sort((a, b) => a.id.localeCompare(b.id));
+  });
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="text-center mb-6">
@@ -103,32 +84,23 @@ export default function CardSelection({
         <p className="text-gray-600">사용할 카드를 선택하세요</p>
       </div>
 
-      {/* 아직 카드를 선택하지 않은 플레이어들 표시 */}
-      {playersNotSelectedCard.length > 0 && (
-        <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-          <h3 className="font-semibold text-orange-800 mb-2">
-            ⏳ 아직 카드를 선택하지 않은 플레이어 ({playersNotSelectedCard.length}명)
+      {/* 현재 사용자의 카드 선택 상태만 표시 */}
+      {!hasSelectedCard && (
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-center">
+          <h3 className="font-semibold text-blue-800 mb-2">
+            🎯 카드를 선택해주세요
           </h3>
-          <div className="flex flex-wrap gap-2">
-            {playersNotSelectedCard.map(player => (
-              <span
-                key={player.id}
-                className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  player.user_id === currentUserId
-                    ? 'bg-orange-200 text-orange-900 border border-orange-300'
-                    : 'bg-orange-100 text-orange-700'
-                }`}
-              >
-                {player.username}
-                {player.user_id === currentUserId && ' (나)'}
-              </span>
-            ))}
-          </div>
+          <p className="text-blue-700 text-sm">
+            원하는 카드를 클릭하여 선택하세요. 선택 후에도 변경할 수 있습니다.
+          </p>
         </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-        {Object.entries(groupedCards).map(([cardType, typeCards]) => {
+        {cardTypeOrder.map(cardType => {
+          const typeCards = groupedCards[cardType];
+          if (!typeCards || typeCards.length === 0) return null;
+          
           const cardInfo = getCardInfo(cardType);
           
           return (
@@ -176,7 +148,10 @@ export default function CardSelection({
       {selectedCard && (
         <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg text-center">
           <p className="text-green-800 font-medium">
-            카드를 선택했습니다! 다른 플레이어들이 선택할 때까지 기다려주세요.
+            ✅ 카드를 선택했습니다! 다른 카드를 선택하여 변경할 수도 있습니다.
+          </p>
+          <p className="text-green-700 text-sm mt-1">
+            다른 플레이어들이 선택할 때까지 기다려주세요.
           </p>
         </div>
       )}
@@ -184,7 +159,7 @@ export default function CardSelection({
       {!selectedCard && (
         <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
           <p className="text-yellow-800 font-medium">
-            카드를 선택해주세요. 선택한 카드는 사용되어 다음 라운드에서 사용할 수 없습니다.
+            ⚠️ 카드를 선택해주세요. 카드는 라운드가 끝날 때까지 보이며, 라운드 종료 후 사용됩니다.
           </p>
         </div>
       )}

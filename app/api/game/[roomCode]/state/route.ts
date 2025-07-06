@@ -85,14 +85,15 @@ export async function GET(
             .order('airplane_number', { ascending: true });
 
           airplanes = airplaneData;
+          console.log(`[State API Supabase] Round ${currentRound.id}: Found ${airplanes?.length || 0} airplanes`);
+          console.log(`[State API Supabase] Airplane data:`, airplanes);
         }
 
-        // My cards info
+        // My cards info - show all cards during the round (don't filter by is_used)
         const { data: cardData } = await supabaseServer
           .from('player_cards')
           .select('*')
-          .eq('player_id', currentPlayer.id)
-          .eq('is_used', false);
+          .eq('player_id', currentPlayer.id);
 
         myCards = cardData;
 
@@ -116,6 +117,17 @@ export async function GET(
           console.log(`[State API Supabase] Round ${currentRound.id}: Found ${allPlayerActions?.length || 0} total actions`);
         }
       }
+
+      console.log(`[State API Supabase] Final response data:`, {
+        gameRoom: gameRoom?.room_code,
+        players: players?.length,
+        currentPlayer: currentPlayer?.username,
+        currentRound: currentRound?.round_number,
+        airplanes: airplanes?.length,
+        myCards: myCards?.length,
+        myActions: myActions?.length,
+        allPlayerActions: allPlayerActions?.length
+      });
 
       return NextResponse.json<ApiResponse<any>>({
         data: {
@@ -163,6 +175,8 @@ export async function GET(
         
         if (currentRound) {
           airplanes = mockGameState.getAirplanes(currentRound.id);
+          console.log(`[State API Memory] Round ${currentRound.id}: Found ${airplanes?.length || 0} airplanes`);
+          console.log(`[State API Memory] Airplane data:`, airplanes);
           myActions = mockGameState.getPlayerActions(currentPlayer.id, currentRound.id);
           // Get all player actions for this round to show who selected what
           allPlayerActions = mockGameState.getAllRoundActions(currentRound.id);
@@ -176,6 +190,17 @@ export async function GET(
 
         myCards = mockGameState.getPlayerCards(currentPlayer.id);
       }
+
+      console.log(`[State API Memory] Final response data:`, {
+        gameRoom: memoryGameRoom?.room_code,
+        players: players?.length,
+        currentPlayer: currentPlayer?.username,
+        currentRound: currentRound?.round_number,
+        airplanes: airplanes?.length,
+        myCards: myCards?.length,
+        myActions: myActions?.length,
+        allPlayerActions: allPlayerActions?.length
+      });
 
       return NextResponse.json<ApiResponse<any>>({
         data: {

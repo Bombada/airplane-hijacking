@@ -9,6 +9,7 @@ import AirplaneSelection from './components/AirplaneSelection';
 import DiscussionPhase from './components/DiscussionPhase';
 import CardSelection from './components/CardSelection';
 import ResultsPhase from './components/ResultsPhase';
+import FinalRankings from './components/FinalRankings';
 
 export default function GameRoomPage() {
   const params = useParams();
@@ -18,9 +19,29 @@ export default function GameRoomPage() {
   const [userId, setUserId] = useState<string>('');
   const [username, setUsername] = useState<string>('');
   const [isInitialized, setIsInitialized] = useState(false);
+  
+  // 로컬 카드 선택 상태 (즉시 UI 업데이트용)
+  const [localSelectedCard, setLocalSelectedCard] = useState<string | undefined>(undefined);
 
   // 실시간 게임 상태 (WebSocket)
   const { gameState, loading, error, isConnected, sendAction, refetch } = useGameStateWS(roomCode, userId);
+
+  // Debug logging for game state
+  useEffect(() => {
+    if (gameState) {
+      console.log('[GamePage] Game state received:', {
+        gameRoom: gameState.gameRoom?.room_code,
+        players: gameState.players?.length,
+        currentPlayer: gameState.currentPlayer?.username,
+        currentRound: gameState.currentRound?.round_number,
+        airplanes: gameState.airplanes?.length,
+        myCards: gameState.myCards?.length,
+        myActions: gameState.myActions?.length,
+        allPlayerActions: gameState.allPlayerActions?.length,
+        fullAirplanes: gameState.airplanes
+      });
+    }
+  }, [gameState]);
 
   useEffect(() => {
     // 로컬 스토리지에서 사용자 정보 가져오기
@@ -37,11 +58,31 @@ export default function GameRoomPage() {
     setIsInitialized(true);
   }, [router]);
 
+  // 페이즈 변경 시 로컬 카드 선택 상태 초기화
+  useEffect(() => {
+    if (gameState?.gameRoom.current_phase !== 'card_selection') {
+      setLocalSelectedCard(undefined);
+    }
+  }, [gameState?.gameRoom.current_phase]);
+
   // 플레이어 액션 처리 (WebSocket)
   const handlePlayerAction = (actionType: string, airplaneId?: string, cardId?: string) => {
     if (!userId) return;
     console.log(`[GamePage] WebSocket action: ${actionType}`);
     sendAction(actionType, airplaneId, cardId);
+  };
+
+  // 카드 선택 처리 (로컬 상태 + 서버 전송)
+  const handleCardSelection = (cardId: string) => {
+    if (!userId) return;
+    
+    console.log(`[GamePage] Local card selection: ${cardId}`);
+    
+    // 즉시 로컬 UI 업데이트
+    setLocalSelectedCard(cardId);
+    
+    // 백그라운드에서 서버에 전송 (UI 업데이트와 독립적)
+    sendAction('select_card', undefined, cardId);
   };
 
   // 게임 시작
@@ -115,6 +156,22 @@ export default function GameRoomPage() {
   const renderGameContent = () => {
     if (!gameState || !gameState.players) {
       return <div>게임 데이터를 로딩 중입니다...</div>;
+    }
+
+    // 게임이 완료된 경우 최종 결과 페이지 표시
+    if (gameState.gameRoom.status === 'finished') {
+      return (
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="text-center mb-6">
+            <h2 className="text-3xl font-bold text-gray-800 mb-2">
+              🎉 게임 완료!
+            </h2>
+            <p className="text-gray-600">게임이 종료되었습니다.</p>
+          </div>
+          
+          <FinalRankings roomCode={roomCode} />
+        </div>
+      );
     }
 
     const phase = gameState.gameRoom.current_phase;
@@ -214,14 +271,49 @@ export default function GameRoomPage() {
         );
 
       case 'card_selection':
+        // 로컬 선택 상태를 우선적으로 사용 (즉시 UI 반영)
+        let selectedCard: string | undefined = localSelectedCard;
+        
+        // 로컬 상태가 없으면 서버 상태에서 가져오기 (초기 로드 시)
+        if (!selectedCard) {
+          // Find the correct current player using userId
+          const actualCurrentPlayerCard = gameState.players.find(p => p.user_id === userId);
+          
+          if (actualCurrentPlayerCard) {
+            const myCardAction = gameState.allPlayerActions?.find(action => {
+              const actionType = action.action_type || action.actionType;
+              return action.player_id === actualCurrentPlayerCard.id && 
+                     (actionType === 'select_card' || action.selected_card_id);
+            });
+            selectedCard = myCardAction?.selected_card_id;
+          }
+          
+          // Fallback: try myActions if allPlayerActions didn't work
+          if (!selectedCard) {
+            const myCardActionFallback = gameState.myActions?.find(action => {
+              const actionType = action.action_type || action.actionType;
+              return actionType === 'select_card' || action.selected_card_id;
+            });
+            selectedCard = myCardActionFallback?.selected_card_id;
+          }
+          
+          // 서버에서 가져온 상태를 로컬 상태에 동기화
+          if (selectedCard) {
+            setLocalSelectedCard(selectedCard);
+          }
+        }
+        
+        console.log('[Page] Card selection state:', {
+          localSelectedCard,
+          finalSelectedCard: selectedCard,
+          usingLocal: !!localSelectedCard
+        });
+        
         return (
           <CardSelection
             cards={gameState.myCards || []}
-            players={gameState.players}
-            allPlayerActions={gameState.allPlayerActions || []}
-            onSelectCard={(cardId: string) => handlePlayerAction('select_card', undefined, cardId)}
-            selectedCard={gameState.myActions?.[0]?.selected_card_id}
-            currentUserId={userId || ''}
+            onSelectCard={handleCardSelection}
+            selectedCard={selectedCard}
           />
         );
 

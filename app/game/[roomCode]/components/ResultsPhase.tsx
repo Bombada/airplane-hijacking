@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import FinalRankings from './FinalRankings';
 
 interface ResultsPhaseProps {
   roomCode: string;
@@ -13,12 +14,20 @@ export default function ResultsPhase({
   userId, 
   currentRound 
 }: ResultsPhaseProps) {
-  const [results, setResults] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
   const [calculating, setCalculating] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [results, setResults] = useState<any>(null);
+  const [resultsCalculated, setResultsCalculated] = useState(false);
+  const [lastCalculatedRound, setLastCalculatedRound] = useState<number | null>(null);
 
   const calculateResults = async () => {
-    if (!userId || calculating) return;
+    if (!userId || calculating || resultsCalculated) return;
+    
+    // Prevent multiple calculations for the same round
+    if (lastCalculatedRound === currentRound?.round_number) {
+      console.log('[ResultsPhase] Results already calculated for this round');
+      return;
+    }
 
     setCalculating(true);
     try {
@@ -27,13 +36,20 @@ export default function ResultsPhase({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({ 
+          userId,
+          roundNumber: currentRound?.round_number,
+          requestId: `${userId}-${currentRound?.round_number}-${Date.now()}`
+        }),
       });
 
       const result = await response.json();
 
       if (response.ok && result.data) {
         setResults(result.data);
+        setResultsCalculated(true);
+        setLastCalculatedRound(currentRound?.round_number || null);
+        console.log('[ResultsPhase] Results calculated successfully');
       } else {
         console.error('Results calculation error:', result.error);
       }
@@ -45,10 +61,50 @@ export default function ResultsPhase({
     }
   };
 
+  // Reset calculation state when round changes
   useEffect(() => {
-    // 컴포넌트 마운트 시 결과 계산
-    calculateResults();
-  }, []);
+    if (currentRound?.round_number !== lastCalculatedRound) {
+      setResultsCalculated(false);
+      setResults(null);
+      setLoading(true);
+    }
+  }, [currentRound?.round_number, lastCalculatedRound]);
+
+  // Calculate results when component mounts or round changes
+  useEffect(() => {
+    if (userId && !resultsCalculated && !calculating && currentRound?.round_number) {
+      calculateResults();
+    }
+  }, [userId, resultsCalculated, calculating, currentRound?.round_number]);
+
+  const startNextRound = async () => {
+    if (calculating) return;
+
+    setCalculating(true);
+    try {
+      const response = await fetch(`/api/admin/rooms/${roomCode}/next-round`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        // 성공 시 페이지 새로고침하여 새 라운드 상태 반영
+        window.location.reload();
+      } else {
+        console.error('Next round error:', result.error);
+        alert('다음 라운드 시작에 실패했습니다: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Start next round error:', error);
+      alert('다음 라운드 시작 중 오류가 발생했습니다.');
+    } finally {
+      setCalculating(false);
+    }
+  };
 
   const getCardInfo = (cardType: string) => {
     switch (cardType) {
@@ -142,36 +198,32 @@ export default function ResultsPhase({
           <p className="text-green-700 mb-4">5라운드가 모두 완료되었습니다.</p>
           
           {/* 최종 순위 */}
-          <div className="bg-white rounded-lg p-4">
-            <h4 className="font-semibold text-gray-800 mb-3">최종 순위</h4>
-            <div className="space-y-2">
-              {results.roundResults
-                ?.sort((a: any, b: any) => b.finalScore - a.finalScore)
-                .map((result: any, index: number) => (
-                  <div
-                    key={result.playerId}
-                    className={`flex items-center justify-between p-2 rounded ${
-                      index === 0 ? 'bg-yellow-100 border border-yellow-300' : 'bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-2">
-                      <span className="font-semibold">
-                        {index + 1}위 {index === 0 && '🏆'}
-                      </span>
-                      <span>{result.username}</span>
-                    </div>
-                    <span className="font-semibold">{result.finalScore}점</span>
-                  </div>
-                ))}
-            </div>
-          </div>
+          <FinalRankings roomCode={roomCode} />
         </div>
       ) : (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-          <h3 className="font-semibold text-blue-800 mb-2">
-            다음 라운드: {results.nextRound}/5
-          </h3>
-          <p className="text-blue-700">잠시 후 다음 라운드가 시작됩니다...</p>
+          {(currentRound?.round_number || 0) < 5 ? (
+            <>
+              <h3 className="font-semibold text-blue-800 mb-2">
+                다음 라운드: {(currentRound?.round_number || 0) + 1}/5
+              </h3>
+              <p className="text-blue-700 mb-4">결과를 확인하고 다음 라운드로 진행하세요.</p>
+              <button
+                onClick={startNextRound}
+                disabled={calculating}
+                className="px-6 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white font-semibold rounded-lg"
+              >
+                {calculating ? '시작 중...' : '다음 라운드 시작'}
+              </button>
+            </>
+          ) : (
+            <>
+              <h3 className="font-semibold text-blue-800 mb-2">
+                🎉 모든 라운드 완료!
+              </h3>
+              <p className="text-blue-700">게임이 종료되었습니다. 최종 결과를 확인하세요.</p>
+            </>
+          )}
         </div>
       )}
 

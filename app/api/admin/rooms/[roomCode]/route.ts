@@ -32,7 +32,78 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Failed to fetch players' }, { status: 500 });
     }
 
-    return NextResponse.json({ room, players: players || [] });
+    // Get current round info
+    const { data: currentRound } = await supabase
+      .from('game_rounds')
+      .select('*')
+      .eq('game_room_id', room.id)
+      .eq('round_number', room.current_round)
+      .single();
+
+    // Fetch detailed player information
+    const playersWithDetails = await Promise.all((players || []).map(async (player) => {
+      // Get player's actions for current round
+      const { data: actions } = await supabase
+        .from('player_actions')
+        .select('*')
+        .eq('player_id', player.id)
+        .eq('game_round_id', currentRound?.id || '');
+
+      // Get player's cards
+      const { data: cards } = await supabase
+        .from('player_cards')
+        .select('*')
+        .eq('player_id', player.id);
+
+      // Get airplanes for reference
+      const { data: airplanes } = await supabase
+        .from('airplanes')
+        .select('*')
+        .eq('game_round_id', currentRound?.id || '');
+
+      // Find selected airplane
+      const airplaneAction = actions?.find(action => action.airplane_id);
+      const selectedAirplane = airplaneAction ? 
+        airplanes?.find(airplane => airplane.id === airplaneAction.airplane_id) : null;
+
+      // Find selected card
+      const cardAction = actions?.find(action => action.selected_card_id);
+      const selectedCard = cardAction ? 
+        cards?.find(card => card.id === cardAction.selected_card_id) : null;
+
+      return {
+        ...player,
+        actions: actions || [],
+        cards: cards || [],
+        selectedAirplane: selectedAirplane ? {
+          id: selectedAirplane.id,
+          airplane_number: selectedAirplane.airplane_number
+        } : null,
+        selectedCard: selectedCard ? {
+          id: selectedCard.id,
+          card_type: selectedCard.card_type,
+          is_used: selectedCard.is_used
+        } : null,
+        actionCount: actions?.length || 0,
+        cardCount: cards?.length || 0
+      };
+    }));
+
+    // Get game statistics
+    const gameStats = {
+      totalPlayers: players?.length || 0,
+      readyPlayers: players?.filter(p => p.is_ready).length || 0,
+      playersWithActions: playersWithDetails.filter(p => p.actionCount > 0).length,
+      playersWithAirplane: playersWithDetails.filter(p => p.selectedAirplane).length,
+      playersWithCard: playersWithDetails.filter(p => p.selectedCard).length
+    };
+
+    return NextResponse.json({ 
+      room, 
+      players: playersWithDetails,
+      currentRound,
+      gameStats
+    });
   } catch (error) {
     console.error('Admin room details API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

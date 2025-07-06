@@ -109,7 +109,7 @@ export function applyHijackerEffect(
  * 게임 종료 조건 확인 (5라운드 완료)
  */
 export function isGameFinished(currentRound: number): boolean {
-  return currentRound > 5;
+  return currentRound >= 5;
 }
 
 /**
