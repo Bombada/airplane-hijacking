@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/server';
 import { ApiResponse } from '@/types/database';
@@ -64,7 +66,7 @@ export async function POST(
   { params }: { params: { roomCode: string } }
 ) {
   try {
-    const { roomCode } = params;
+    const { roomCode } = await params;
 
     // Get game room
     const { data: gameRoom, error: roomError } = await supabase

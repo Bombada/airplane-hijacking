@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/server';
 
+export const runtime = 'edge';
+
 interface GameRoom {
   id: string;
   room_code: string;

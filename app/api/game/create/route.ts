@@ -4,6 +4,8 @@ import { generateRoomCode } from '@/lib/utils/roomCode';
 import { ApiResponse, GameRoom } from '@/types/database';
 import mockGameState from '@/lib/game/mockGameState';
 
+export const runtime = 'edge';
+
 export async function POST(request: NextRequest) {
   try {
     const { username, userId } = await request.json();
