@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getPhaseDuration } from '@/lib/game/gameLogic';
+import { getPhaseTimeLimit } from '@/lib/game/gameLogic';
 
 export async function GET(
   request: Request,
@@ -16,7 +16,7 @@ export async function GET(
       );
     }
 
-    const duration = await getPhaseDuration(phase);
+    const duration = getPhaseTimeLimit(phase);
     return NextResponse.json({ duration });
   } catch (error) {
     console.error('Error fetching phase duration:', error);

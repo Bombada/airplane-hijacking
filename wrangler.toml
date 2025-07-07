@@ -1,0 +1,14 @@
+name = "airplane-hijacking"
+compatibility_date = "2024-12-19"
+
+# Pages 프로젝트 설정
+[env.production]
+name = "airplane-hijacking"
+
+# 환경 변수 설정 (민감한 정보는 Cloudflare Dashboard에서 설정)
+[env.production.vars]
+NODE_ENV = "production"
+
+# 웹소켓 관련 설정은 별도의 Worker로 분리해야 함
+# 현재 프로젝트에서는 WebSocket 서버를 사용하고 있으므로
+# 이를 Cloudflare Workers로 마이그레이션하거나 다른 서비스를 사용해야 함 
