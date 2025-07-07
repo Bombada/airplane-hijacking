@@ -124,16 +124,16 @@ export async function POST(request: NextRequest) {
         switch (num) {
           case 1:
           case 2:
-            max_passengers = 1;
+            max_passengers = 2;
             break;
           case 3:
-            max_passengers = 3;
+            max_passengers = 4;
             break;
           case 4:
             max_passengers = 8;
             break;
           default:
-            max_passengers = 1;
+            max_passengers = 2;
         }
         return {
           game_round_id: round.id,

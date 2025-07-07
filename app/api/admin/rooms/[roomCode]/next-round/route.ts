@@ -59,9 +59,9 @@ export async function POST(
 
     // Create airplanes for the new round
     const airplaneInserts = [
-      { game_round_id: newRound.id, airplane_number: 1, max_passengers: 1 },
-      { game_round_id: newRound.id, airplane_number: 2, max_passengers: 1 },
-      { game_round_id: newRound.id, airplane_number: 3, max_passengers: 3 },
+      { game_round_id: newRound.id, airplane_number: 1, max_passengers: 2 },
+      { game_round_id: newRound.id, airplane_number: 2, max_passengers: 2 },
+      { game_round_id: newRound.id, airplane_number: 3, max_passengers: 4 },
       { game_round_id: newRound.id, airplane_number: 4, max_passengers: 8 }
     ];
 

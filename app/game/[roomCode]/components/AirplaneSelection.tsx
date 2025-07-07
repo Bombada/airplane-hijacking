@@ -54,7 +54,7 @@ export default function AirplaneSelection({
     }
 
     const startTime = new Date(phaseStartTime).getTime();
-    const duration = 15 * 1000; // 15 seconds
+    const duration = 40 * 1000; // 15 seconds
     const endTime = startTime + duration;
 
     const timer = setInterval(() => {

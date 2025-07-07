@@ -97,41 +97,67 @@ export function calculateGameScore(
       single: airplanePassengers.filter(p => p.cardType === 'single').length
     };
 
+    // 하이재커가 있는지 확인
+    const hasHijacker = cardCounts.hijacker > 0;
+    
+    // 하이재커가 있으면 승객 수를 0으로 계산, 없으면 본인 제외
+    const effectivePassengerCount = hasHijacker ? 0 : (totalPassengers - 1);
+
     let finalScore = 0;
 
-    switch (action.cardType) {
-      case 'passenger':
-        // 승객: 함께 탑승한 승객 수 × 2점
-        finalScore = (totalPassengers - 1) * 2;
-        break;
+    // 하이재커가 있으면 추종자 외 다른 승객들은 점수를 0으로 만듦
+    if (hasHijacker && action.cardType !== 'hijacker' && action.cardType !== 'follower') {
+      finalScore = 0;
+    } else {
+      switch (action.cardType) {
+        case 'passenger':
+          // 승객: 함께 탑승한 승객 수 × 2점 (하이재커가 있으면 0점)
+          finalScore = effectivePassengerCount * 2;
+          break;
 
-      case 'hijacker':
-        // 하이재커: 함께 탑승한 승객 수 × 3점, 추종자가 있으면 추종자 수 × 3점 차감
-        finalScore = (totalPassengers - 1) * 3 - (cardCounts.follower * 3);
-        break;
+        case 'hijacker':
+          // 하이재커: 함께 탑승한 승객 수 × 3점, 추종자가 있으면 추종자 수 × 3점 차감
+          finalScore = (totalPassengers - 1) * 3 - (cardCounts.follower * 3);
+          break;
 
-      case 'follower':
-        // 추종자: 탑승한 비행기에 하이재커가 있을 경우 7점
-        finalScore = cardCounts.hijacker > 0 ? 7 : 0;
-        break;
+        case 'follower':
+          // 추종자: 탑승한 비행기에 하이재커가 있을 경우 7점
+          finalScore = hasHijacker ? 7 : 0;
+          break;
 
-      case 'baby':
-        // 우는 애기: 본인: 함께 탑승한 승객 수 × 2점
-        finalScore = (totalPassengers - 1) * 2;
-        break;
+        case 'baby':
+          // 우는 애기: 함께 탑승한 승객 수 × 2점 (하이재커가 있으면 0점)
+          finalScore = effectivePassengerCount * 2;
+          break;
 
-      case 'couple':
-        // 연인: 기본 점수: 함께 탑승한 승객 수 × 2점, 추가 점수: 연인 수 × 1점 (본인 제외)
-        finalScore = (totalPassengers - 1) * 2 + (cardCounts.couple - 1) * 1;
-        break;
+        case 'couple':
+          // 연인: 기본 점수: 함께 탑승한 승객 수 × 2점, 추가 점수: 연인 수 × 1점 (본인 제외)
+          // 하이재커가 있으면 0점
+          if (hasHijacker) {
+            finalScore = 0;
+          } else {
+            finalScore = effectivePassengerCount * 2 + (cardCounts.couple - 1) * 1;
+          }
+          break;
 
-      case 'single':
-        // 모태솔로: 기본 점수: 함께 탑승한 승객 수 × 3점, 감점: 연인 수 × 1점
-        finalScore = (totalPassengers - 1) * 3 - (cardCounts.couple * 1);
-        break;
+        case 'single':
+          // 모태솔로: 기본 점수: 함께 탑승한 승객 수 × 3점, 감점: 연인 수 × 1점
+          // 하이재커가 있으면 0점
+          if (hasHijacker) {
+            finalScore = 0;
+          } else {
+            finalScore = effectivePassengerCount * 3 - (cardCounts.couple * 1);
+          }
+          break;
 
-      default:
-        finalScore = 0;
+        default:
+          finalScore = 0;
+      }
+    }
+
+    // 우는 애기 효과 적용: 같은 비행기에 우는 애기가 있으면 모든 카드에 -1점 (우는 애기 본인 제외)
+    if (cardCounts.baby > 0 && action.cardType !== 'baby') {
+      finalScore = Math.max(0, finalScore - cardCounts.baby);
     }
 
     results.push({
@@ -141,21 +167,6 @@ export function calculateGameScore(
       cardType: action.cardType,
       finalScore: Math.max(0, finalScore) // 음수 방지
     });
-  });
-
-  // 우는 애기 효과 적용 (다른 승객들 각각 1점 차감)
-  playerActions.forEach(action => {
-    if (action.cardType === 'baby') {
-      const airplanePassengers = airplaneData[action.airplaneNumber];
-      
-      // 같은 비행기의 다른 승객들에게 1점씩 차감
-      results.forEach(result => {
-        if (result.airplaneNumber === action.airplaneNumber && 
-            result.playerId !== action.playerId) {
-          result.finalScore = Math.max(0, result.finalScore - 1);
-        }
-      });
-    }
   });
 
   return results;
