@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useGameStateWS } from '@/lib/hooks/useGameStateWS';
+import { useGameStateWS } from '../../../lib/hooks/useGameStateWS';
 import PlayerList from './components/PlayerList';
 import GameBoard from './components/GameBoard';
 import AirplaneSelection from './components/AirplaneSelection';

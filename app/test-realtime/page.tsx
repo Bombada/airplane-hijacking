@@ -1,8 +1,8 @@
 'use client';
 
-import { useRealtime } from '@/lib/hooks/useRealtime';
+import { useRealtime } from '../../lib/hooks/useRealtime';
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase/client';
+import { supabase } from '../../lib/supabase/client';
 
 export default function TestRealtimePage() {
   const [roomCode, setRoomCode] = useState('test-room-123');

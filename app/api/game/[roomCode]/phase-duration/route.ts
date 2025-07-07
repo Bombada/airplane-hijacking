@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getPhaseTimeLimit } from '@/lib/game/gameLogic';
+import { getPhaseTimeLimit } from '../../../../../lib/game/gameLogic';
 
 export async function GET(
   request: Request,
