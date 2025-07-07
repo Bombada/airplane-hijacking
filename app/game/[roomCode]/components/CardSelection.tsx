@@ -5,7 +5,7 @@ import AirplanePassengers from './AirplanePassengers';
 
 interface Card {
   id: string;
-  card_type: 'passenger' | 'follower' | 'hijacker';
+  card_type: 'passenger' | 'follower' | 'hijacker' | 'baby' | 'couple' | 'single';
 }
 
 interface CardSelectionProps {
@@ -39,7 +39,7 @@ export default function CardSelection({
     }
 
     const startTime = new Date(phaseStartTime).getTime();
-    const duration = 30 * 1000; // 30 seconds
+    const duration = 15 * 1000; // 15 seconds
     const endTime = startTime + duration;
 
     const timer = setInterval(() => {
@@ -82,10 +82,19 @@ export default function CardSelection({
   };
 
   // Timer color based on remaining time
-  const timerColor = timeRemaining === null ? 'text-gray-500' :
-    timeRemaining > 30000 ? 'text-green-500' :
-    timeRemaining > 10000 ? 'text-yellow-500' :
-    'text-red-500';
+  const getTimerColor = () => {
+    if (timeRemaining === null) return 'text-gray-500';
+    if (timeRemaining > 10000) return 'text-green-500';
+    if (timeRemaining > 5000) return 'text-yellow-500';
+    return 'text-red-500';
+  };
+
+  // Format time for display
+  const formatTime = (milliseconds: number | null) => {
+    if (milliseconds === null) return '';
+    const seconds = Math.ceil(milliseconds / 1000);
+    return `${seconds}초`;
+  };
   
   const getCardInfo = (type: string) => {
     switch (type) {
@@ -96,7 +105,8 @@ export default function CardSelection({
           color: 'bg-blue-500',
           borderColor: 'border-blue-500',
           bgColor: 'bg-blue-50',
-          description: '해당 비행기의 승객 수만큼 점수'
+          hoverColor: 'hover:bg-blue-100',
+          description: '함께 탑승한 승객 수 × 2점을 얻습니다'
         };
       case 'follower':
         return {
@@ -105,7 +115,8 @@ export default function CardSelection({
           color: 'bg-green-500',
           borderColor: 'border-green-500',
           bgColor: 'bg-green-50',
-          description: '가장 많은 승객이 있는 비행기에서만 점수'
+          hoverColor: 'hover:bg-green-100',
+          description: '탑승한 비행기에 하이재커가 있을 경우 7점을 얻습니다'
         };
       case 'hijacker':
         return {
@@ -114,7 +125,38 @@ export default function CardSelection({
           color: 'bg-red-500',
           borderColor: 'border-red-500',
           bgColor: 'bg-red-50',
-          description: '다른 모든 카드를 무효화하고 독점 점수'
+          hoverColor: 'hover:bg-red-100',
+          description: '함께 탑승한 승객 수 × 3점, 추종자가 있으면 추종자 수 × 3점 차감'
+        };
+      case 'baby':
+        return {
+          emoji: '👶',
+          name: '우는 애기',
+          color: 'bg-purple-500',
+          borderColor: 'border-purple-500',
+          bgColor: 'bg-purple-50',
+          hoverColor: 'hover:bg-purple-100',
+          description: '함께 탑승한 승객 수 × 2점, 다른 승객들은 각각 1점 차감'
+        };
+      case 'couple':
+        return {
+          emoji: '💕',
+          name: '연인',
+          color: 'bg-pink-500',
+          borderColor: 'border-pink-500',
+          bgColor: 'bg-pink-50',
+          hoverColor: 'hover:bg-pink-100',
+          description: '함께 탑승한 승객 수 × 2점 + 연인 수 × 1점(본인 제외)'
+        };
+      case 'single':
+        return {
+          emoji: '😢',
+          name: '모태솔로',
+          color: 'bg-gray-500',
+          borderColor: 'border-gray-500',
+          bgColor: 'bg-gray-50',
+          hoverColor: 'hover:bg-gray-100',
+          description: '함께 탑승한 승객 수 × 3점, 연인 수 × 1점 차감'
         };
       default:
         return {
@@ -123,6 +165,7 @@ export default function CardSelection({
           color: 'bg-gray-500',
           borderColor: 'border-gray-500',
           bgColor: 'bg-gray-50',
+          hoverColor: 'hover:bg-gray-100',
           description: ''
         };
     }
@@ -132,7 +175,7 @@ export default function CardSelection({
   const hasSelectedCard = !!selectedCard;
 
   // Fixed order for card types to prevent reordering
-  const cardTypeOrder = ['passenger', 'follower', 'hijacker'] as const;
+  const cardTypeOrder = ['passenger', 'follower', 'hijacker', 'baby', 'couple', 'single'] as const;
   
   const groupedCards = cards.reduce((acc, card) => {
     if (!acc[card.card_type]) {
@@ -147,122 +190,201 @@ export default function CardSelection({
     groupedCards[cardType].sort((a, b) => a.id.localeCompare(b.id));
   });
 
+  // Get card count for each type
+  const getCardCount = (cardType: string) => {
+    return groupedCards[cardType]?.length || 0;
+  };
+
+  // Get selected card info
+  const getSelectedCardInfo = () => {
+    if (!selectedCard) return null;
+    const card = cards.find(c => c.id === selectedCard);
+    return card ? getCardInfo(card.card_type) : null;
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">카드 선택</h2>
-        {timeRemaining !== null && (
-          <div className={`text-lg font-bold ${timerColor}`}>
-            {Math.ceil(timeRemaining! / 1000)}초
-          </div>
-        )}
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">🃏 카드 선택</h2>
+        <p className="text-gray-600">사용할 카드를 선택하세요</p>
       </div>
-      
-      <p className="text-gray-600 text-center mb-6">사용할 카드를 선택하세요</p>
 
-      {/* 현재 사용자의 카드 선택 상태만 표시 */}
-      {!hasSelectedCard && (
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-center">
-          <h3 className="font-semibold text-blue-800 mb-2">
-            🎯 카드를 선택해주세요
-          </h3>
-          <p className="text-blue-700 text-sm">
-            원하는 카드를 클릭하여 선택하세요. 선택 후에도 변경할 수 있습니다.
+      {/* 타이머 */}
+      {timeRemaining !== null && (
+        <div className="text-center mb-6">
+          <div className={`text-4xl font-bold ${getTimerColor()} mb-2`}>
+            {formatTime(timeRemaining)}
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-3 max-w-md mx-auto">
+            <div 
+              className={`h-3 rounded-full transition-all duration-1000 ${
+                timeRemaining > 10000 ? 'bg-green-500' : 
+                timeRemaining > 5000 ? 'bg-yellow-500' : 'bg-red-500'
+              }`}
+              style={{ width: `${(timeRemaining / 15000) * 100}%` }}
+            ></div>
+          </div>
+          <p className="text-sm text-gray-600 mt-2">
+            남은 시간: {formatTime(timeRemaining)}
           </p>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+      {/* 현재 선택된 카드 표시 */}
+      {hasSelectedCard && (
+        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg text-center">
+          <h3 className="font-semibold text-green-800 mb-2">
+            ✅ 선택된 카드
+          </h3>
+          <div className="flex items-center justify-center space-x-2">
+            <span className="text-2xl">{getSelectedCardInfo()?.emoji}</span>
+            <span className="text-green-700 font-medium">{getSelectedCardInfo()?.name}</span>
+          </div>
+          <p className="text-green-700 text-sm mt-1">
+            다른 카드를 선택하여 변경할 수 있습니다.
+          </p>
+        </div>
+      )}
+
+      {/* 카드 선택 버튼들 */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-6xl mx-auto mb-6">
         {cardTypeOrder.map(cardType => {
-          const typeCards = groupedCards[cardType];
-          if (!typeCards || typeCards.length === 0) return null;
-          
+          const cardCount = getCardCount(cardType);
           const cardInfo = getCardInfo(cardType);
+          const isSelected = selectedCard && cards.find(c => c.id === selectedCard)?.card_type === cardType;
+          const hasCards = cardCount > 0;
           
           return (
-            <div key={cardType} className="space-y-3">
-              <h3 className="text-lg font-semibold text-gray-800 text-center">
-                {cardInfo.emoji} {cardInfo.name}
-              </h3>
-              
-              <div className="space-y-2">
-                {typeCards.map((card) => (
-                  <button
-                    key={card.id}
-                    onClick={() => onSelectCard(card.id)}
-                    className={`w-full p-4 rounded-xl border-2 transition-all duration-200 hover:scale-105 ${
-                      selectedCard === card.id
-                        ? `${cardInfo.borderColor} ${cardInfo.bgColor} shadow-lg`
-                        : 'border-gray-300 bg-white hover:border-gray-400 hover:shadow-md'
-                    }`}
-                  >
-                    <div className="text-center">
-                      <div className="text-3xl mb-2">
-                        {cardInfo.emoji}
-                      </div>
-                      <div className="font-medium text-gray-800">
-                        {cardInfo.name}
-                      </div>
-                      {selectedCard === card.id && (
-                        <div className="mt-2 text-green-600 font-medium">
-                          ✓ 선택됨
-                        </div>
-                      )}
+            <div key={cardType} className="relative">
+              <button
+                onClick={() => {
+                  if (hasCards) {
+                    // Find the first available card of this type
+                    const firstCard = groupedCards[cardType]?.[0];
+                    if (firstCard) {
+                      onSelectCard(firstCard.id);
+                    }
+                  }
+                }}
+                disabled={!hasCards}
+                className={`w-full p-4 rounded-xl border-2 transition-all duration-200 hover:scale-105 ${
+                  isSelected
+                    ? `${cardInfo.borderColor} ${cardInfo.bgColor} shadow-lg`
+                    : hasCards
+                    ? `border-gray-300 bg-white ${cardInfo.hoverColor} hover:border-gray-400 hover:shadow-md`
+                    : 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-50'
+                }`}
+              >
+                <div className="text-center">
+                  <div className="text-3xl mb-2">
+                    {cardInfo.emoji}
+                  </div>
+                  <div className="font-bold text-sm text-gray-800 mb-1">
+                    {cardInfo.name}
+                  </div>
+                  <div className={`text-xs font-medium mb-2 ${
+                    hasCards ? 'text-blue-600' : 'text-gray-400'
+                  }`}>
+                    보유: {cardCount}개
+                  </div>
+                  {isSelected && (
+                    <div className="text-green-600 font-bold text-xs">
+                      ✓ 선택됨
                     </div>
-                  </button>
-                ))}
-              </div>
+                  )}
+                  {!hasCards && (
+                    <div className="text-red-500 font-medium text-xs">
+                      ❌ 없음
+                    </div>
+                  )}
+                </div>
+              </button>
               
-              <div className="text-xs text-gray-600 text-center p-2 bg-gray-50 rounded">
-                {cardInfo.description}
+              {/* 카드 설명 */}
+              <div className="mt-2 p-2 bg-gray-50 rounded-lg">
+                <p className="text-xs text-gray-600 text-center">
+                  {cardInfo.description}
+                </p>
               </div>
             </div>
           );
         })}
       </div>
 
-      {selectedCard && (
-        <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg text-center">
-          <p className="text-green-800 font-medium">
-            ✅ 카드를 선택했습니다! 다른 카드를 선택하여 변경할 수도 있습니다.
-          </p>
-          <p className="text-green-700 text-sm mt-1">
-            다른 플레이어들이 선택할 때까지 기다려주세요.
-          </p>
-        </div>
-      )}
-
-      {!selectedCard && (
-        <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
+      {/* 선택 안내 메시지 */}
+      {!hasSelectedCard && (
+        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
           <p className="text-yellow-800 font-medium">
-            ⚠️ 카드를 선택해주세요. 카드는 라운드가 끝날 때까지 보이며, 라운드 종료 후 사용됩니다.
+            ⚠️ 카드를 선택해주세요
+          </p>
+          <p className="text-yellow-700 text-sm mt-1">
+            위의 카드 버튼을 클릭하여 사용할 카드를 선택하세요.
           </p>
         </div>
       )}
 
-      {/* 카드 설명 */}
-      <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-        <h3 className="font-semibold text-gray-800 mb-3">🃏 카드 설명</h3>
-        <div className="space-y-2 text-sm">
-          <div className="flex items-start space-x-2">
-            <span className="text-blue-500">👤</span>
+      {/* 카드 상세 설명 */}
+      <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+        <h3 className="font-semibold text-blue-800 mb-3">📋 카드 상세 설명</h3>
+        <div className="space-y-3 text-sm">
+          <div className="flex items-start space-x-3 p-3 bg-white rounded-lg">
+            <span className="text-2xl">👤</span>
             <div>
-              <span className="font-medium text-blue-700">승객:</span>
-              <span className="text-gray-600 ml-1">해당 비행기에 있는 승객 카드 수만큼 점수를 얻습니다.</span>
+              <span className="font-bold text-blue-700">승객 카드:</span>
+              <p className="text-gray-700 mt-1">
+                함께 탑승한 승객 수 × 2점을 얻습니다. 
+                승객이 많을수록 더 많은 점수를 얻을 수 있습니다.
+              </p>
             </div>
           </div>
-          <div className="flex items-start space-x-2">
-            <span className="text-green-500">👥</span>
+          <div className="flex items-start space-x-3 p-3 bg-white rounded-lg">
+            <span className="text-2xl">👥</span>
             <div>
-              <span className="font-medium text-green-700">추종자:</span>
-              <span className="text-gray-600 ml-1">가장 많은 승객이 있는 비행기와 같은 비행기에 있어야 점수를 얻습니다.</span>
+              <span className="font-bold text-green-700">추종자 카드:</span>
+              <p className="text-gray-700 mt-1">
+                탑승한 비행기에 하이재커가 있을 경우 7점을 얻습니다.
+                하이재커를 잘 찾아서 함께 탑승하는 것이 중요합니다.
+              </p>
             </div>
           </div>
-          <div className="flex items-start space-x-2">
-            <span className="text-red-500">🔫</span>
+          <div className="flex items-start space-x-3 p-3 bg-white rounded-lg">
+            <span className="text-2xl">🔫</span>
             <div>
-              <span className="font-medium text-red-700">하이재커:</span>
-              <span className="text-gray-600 ml-1">해당 비행기의 다른 모든 카드를 무효화하고 혼자 점수를 독점합니다.</span>
+              <span className="font-bold text-red-700">하이재커 카드:</span>
+              <p className="text-gray-700 mt-1">
+                함께 탑승한 승객 수 × 3점을 얻습니다. 
+                단, 추종자가 있으면 추종자 수 × 3점이 차감됩니다.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start space-x-3 p-3 bg-white rounded-lg">
+            <span className="text-2xl">👶</span>
+            <div>
+              <span className="font-bold text-purple-700">우는 애기 카드:</span>
+              <p className="text-gray-700 mt-1">
+                함께 탑승한 승객 수 × 2점을 얻습니다. 
+                단, 다른 승객들은 각각 1점씩 차감됩니다.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start space-x-3 p-3 bg-white rounded-lg">
+            <span className="text-2xl">💕</span>
+            <div>
+              <span className="font-bold text-pink-700">연인 카드:</span>
+              <p className="text-gray-700 mt-1">
+                함께 탑승한 승객 수 × 2점 + 연인 수 × 1점(본인 제외)을 얻습니다.
+                다른 연인과 함께 탑승하면 추가 점수를 얻습니다.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start space-x-3 p-3 bg-white rounded-lg">
+            <span className="text-2xl">😢</span>
+            <div>
+              <span className="font-bold text-gray-700">모태솔로 카드:</span>
+              <p className="text-gray-700 mt-1">
+                함께 탑승한 승객 수 × 3점을 얻습니다. 
+                단, 연인이 있으면 연인 수 × 1점이 차감됩니다.
+              </p>
             </div>
           </div>
         </div>

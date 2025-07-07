@@ -141,6 +141,12 @@ export default function ResultsPhase({
         return { emoji: '👥', name: '추종자', color: 'text-green-600' };
       case 'hijacker':
         return { emoji: '🔫', name: '하이재커', color: 'text-red-600' };
+      case 'baby':
+        return { emoji: '👶', name: '우는 애기', color: 'text-purple-600' };
+      case 'couple':
+        return { emoji: '💕', name: '연인', color: 'text-pink-600' };
+      case 'single':
+        return { emoji: '😢', name: '모태솔로', color: 'text-gray-600' };
       default:
         return { emoji: '❓', name: '알 수 없음', color: 'text-gray-600' };
     }
@@ -194,13 +200,28 @@ export default function ResultsPhase({
           🎯 라운드 {currentRound?.round_number} 결과
         </h2>
         <p className="text-gray-600">각 플레이어의 선택과 점수를 확인하세요</p>
-        {/* Add timer display */}
-        {timeRemaining !== null && (
-          <div className={`text-lg font-bold mt-2 ${getTimerColor()}`}>
+      </div>
+
+      {/* 타이머 */}
+      {timeRemaining !== null && !results?.gameFinished && (
+        <div className="text-center mb-6">
+          <div className={`text-4xl font-bold ${getTimerColor()} mb-2`}>
             {formatTime(timeRemaining)}
           </div>
-        )}
-      </div>
+          <div className="w-full bg-gray-200 rounded-full h-3 max-w-md mx-auto">
+            <div 
+              className={`h-3 rounded-full transition-all duration-1000 ${
+                timeRemaining > 10000 ? 'bg-green-500' : 
+                timeRemaining > 5000 ? 'bg-yellow-500' : 'bg-red-500'
+              }`}
+              style={{ width: `${(timeRemaining / 15000) * 100}%` }}
+            ></div>
+          </div>
+          <p className="text-sm text-gray-600 mt-2">
+            다음 라운드까지: {formatTime(timeRemaining)}
+          </p>
+        </div>
+      )}
 
       {/* 라운드 결과 */}
       <div className="space-y-4 mb-6">

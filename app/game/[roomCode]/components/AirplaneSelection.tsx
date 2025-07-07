@@ -54,7 +54,7 @@ export default function AirplaneSelection({
     }
 
     const startTime = new Date(phaseStartTime).getTime();
-    const duration = 30 * 1000; // 30 seconds
+    const duration = 15 * 1000; // 15 seconds
     const endTime = startTime + duration;
 
     const timer = setInterval(() => {
@@ -97,17 +97,18 @@ export default function AirplaneSelection({
   };
 
   // Format time for display
-  const formatTime = (seconds: number | null) => {
-    if (seconds === null) return '';
+  const formatTime = (milliseconds: number | null) => {
+    if (milliseconds === null) return '';
+    const seconds = Math.ceil(milliseconds / 1000);
     return `${seconds}초`;
   };
 
   // Get timer color based on remaining time
   const getTimerColor = () => {
-    if (timeRemaining === null) return 'text-gray-600';
-    if (timeRemaining > 10) return 'text-green-600';
-    if (timeRemaining > 5) return 'text-yellow-600';
-    return 'text-red-600';
+    if (timeRemaining === null) return 'text-gray-500';
+    if (timeRemaining > 10000) return 'text-green-500';
+    if (timeRemaining > 5000) return 'text-yellow-500';
+    return 'text-red-500';
   };
   
   // // Debug logging
@@ -185,14 +186,31 @@ export default function AirplaneSelection({
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-bold">비행기 선택</h2>
-        {timeRemaining !== null && (
-          <div className={`text-lg font-bold ${getTimerColor()}`}>
-            {Math.ceil(timeRemaining / 1000)}초
-          </div>
-        )}
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">✈️ 비행기 선택</h2>
+        <p className="text-gray-600">탑승할 비행기를 선택하세요</p>
       </div>
+
+      {/* 타이머 */}
+      {timeRemaining !== null && (
+        <div className="text-center mb-8">
+          <div className={`text-4xl font-bold ${getTimerColor()} mb-2`}>
+            {formatTime(timeRemaining)}
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-3 max-w-md mx-auto">
+            <div 
+              className={`h-3 rounded-full transition-all duration-1000 ${
+                timeRemaining > 10000 ? 'bg-green-500' : 
+                timeRemaining > 5000 ? 'bg-yellow-500' : 'bg-red-500'
+              }`}
+              style={{ width: `${(timeRemaining / 15000) * 100}%` }}
+            ></div>
+          </div>
+          <p className="text-sm text-gray-600 mt-2">
+            남은 시간: {formatTime(timeRemaining)}
+          </p>
+        </div>
+      )}
       
       <div className="grid grid-cols-2 gap-6 mb-8">
         {airplanes.map((airplane) => {
@@ -257,6 +275,13 @@ export default function AirplaneSelection({
           </div>
         </div>
       )}
+
+      {/* 다음 단계 안내 */}
+      <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-center">
+        <p className="text-blue-800 font-medium">
+          비행기 선택이 끝나면 자동으로 토론 단계로 넘어갑니다.
+        </p>
+      </div>
     </div>
   );
 }; 

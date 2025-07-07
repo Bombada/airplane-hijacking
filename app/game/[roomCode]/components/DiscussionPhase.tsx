@@ -87,11 +87,17 @@ export default function DiscussionPhase({
   const getCardEmoji = (cardType: string) => {
     switch (cardType) {
       case 'passenger':
-        return '👨‍👩‍👧‍👦';
+        return '👤';
       case 'follower':
-        return '🐑';
+        return '👥';
       case 'hijacker':
-        return '🦹';
+        return '🔫';
+      case 'baby':
+        return '👶';
+      case 'couple':
+        return '💕';
+      case 'single':
+        return '😢';
       default:
         return '❓';
     }
@@ -105,6 +111,12 @@ export default function DiscussionPhase({
         return '추종자';
       case 'hijacker':
         return '하이재커';
+      case 'baby':
+        return '우는 애기';
+      case 'couple':
+        return '연인';
+      case 'single':
+        return '모태솔로';
       default:
         return '알 수 없음';
     }
@@ -113,11 +125,17 @@ export default function DiscussionPhase({
   const getCardDescription = (cardType: string) => {
     switch (cardType) {
       case 'passenger':
-        return '일반 승객입니다. 안전한 비행기에 탑승하여 목적지에 도착하세요.';
+        return '함께 탑승한 승객 수 × 2점을 얻습니다.';
       case 'follower':
-        return '하이재커의 추종자입니다. 하이재커와 같은 비행기에 탑승하면 추가 점수를 얻습니다.';
+        return '탑승한 비행기에 하이재커가 있을 경우 7점을 얻습니다.';
       case 'hijacker':
-        return '하이재커입니다. 비행기를 선택하면 해당 비행기는 다른 목적지로 향합니다.';
+        return '함께 탑승한 승객 수 × 3점을 얻습니다. 추종자가 있으면 추종자 수 × 3점 차감됩니다.';
+      case 'baby':
+        return '함께 탑승한 승객 수 × 2점을 얻습니다. 다른 승객들은 각각 1점씩 차감됩니다.';
+      case 'couple':
+        return '함께 탑승한 승객 수 × 2점 + 연인 수 × 1점(본인 제외)을 얻습니다.';
+      case 'single':
+        return '함께 탑승한 승객 수 × 3점을 얻습니다. 연인이 있으면 연인 수 × 1점 차감됩니다.';
       default:
         return '';
     }

@@ -37,7 +37,7 @@ export interface Airplane {
 export interface PlayerCard {
   id: string;
   player_id: string;
-  card_type: 'passenger' | 'follower' | 'hijacker';
+  card_type: 'passenger' | 'follower' | 'hijacker' | 'baby' | 'couple' | 'single';
   is_used: boolean;
   created_at: string;
 }
@@ -69,4 +69,4 @@ export interface ApiResponse<T> {
 // 게임 상태 타입
 export type GamePhase = 'waiting' | 'airplane_selection' | 'discussion' | 'card_selection' | 'results';
 export type GameStatus = 'waiting' | 'playing' | 'finished';
-export type CardType = 'passenger' | 'follower' | 'hijacker'; 
+export type CardType = 'passenger' | 'follower' | 'hijacker' | 'baby' | 'couple' | 'single'; 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/server';
-import { calculateRoundScore, applyHijackerEffect, isGameFinished } from '@/lib/game/gameLogic';
+import { calculateGameScore, isGameFinished } from '@/lib/game/gameLogic';
 import { ApiResponse } from '@/types/database';
 import mockGameState from '@/lib/game/mockGameState';
 
@@ -113,7 +113,7 @@ export async function POST(
         .select(`
           *,
           players!inner(username, total_score),
-          airplanes!inner(airplane_number, max_passengers),
+          airplanes!inner(airplane_number),
           player_cards!inner(card_type)
         `)
         .eq('game_round_id', currentRound.id);
@@ -137,39 +137,16 @@ export async function POST(
         });
       }
 
-      // Calculate passengers per airplane and check max passenger limits
-      const airplanePassengers: Record<number, number> = {};
-      const airplaneMaxPassengers: Record<number, number> = {};
-      
-      playerActions.forEach((action: any) => {
-        const airplaneNumber = action.airplanes.airplane_number;
-        const cardType = action.player_cards.card_type;
-        const maxPassengers = action.airplanes.max_passengers;
-        
-        // Store max passengers limit for each airplane
-        airplaneMaxPassengers[airplaneNumber] = maxPassengers;
-        
-        if (cardType === 'passenger') {
-          airplanePassengers[airplaneNumber] = (airplanePassengers[airplaneNumber] || 0) + 1;
-        }
-      });
-
-      // Calculate base scores for each player
-      const playerScores = playerActions.map((action: any) => ({
+      // Prepare data for new game score calculation
+      const gameActions = playerActions.map((action: any) => ({
         playerId: action.player_id,
         username: action.players.username,
         airplaneNumber: action.airplanes.airplane_number,
-        cardType: action.player_cards.card_type,
-        baseScore: calculateRoundScore(
-          airplanePassengers,
-          action.airplanes.airplane_number,
-          action.player_cards.card_type,
-          airplaneMaxPassengers[action.airplanes.airplane_number]
-        )
+        cardType: action.player_cards.card_type
       }));
 
-      // Apply hijacker effects
-      const finalScores = applyHijackerEffect(playerScores);
+      // Calculate scores using new game logic
+      const finalScores = calculateGameScore(gameActions);
 
       // Save round results using insert (not upsert) to ensure atomicity
       const roundResults = finalScores.map(score => ({
@@ -349,14 +326,15 @@ export async function POST(
         }
       });
 
-      // Calculate results (simplified for memory mode)
-      const mockResults = allPlayerActions.map(action => ({
+      // Calculate results using new game logic
+      const gameActions = allPlayerActions.map(action => ({
         playerId: action.player_id,
         username: `Player_${action.player_id.slice(-4)}`,
-        airplaneNumber: 1, // Simplified
-        cardType: 'passenger', // Simplified
-        finalScore: Math.floor(Math.random() * 5) + 1
+        airplaneNumber: 1, // Simplified for memory mode
+        cardType: 'passenger' as const // Simplified for memory mode
       }));
+
+      const mockResults = calculateGameScore(gameActions);
 
       return NextResponse.json<ApiResponse<any>>({
         data: {

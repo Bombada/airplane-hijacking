@@ -1,17 +1,18 @@
 import { CardType } from '@/types/database';
 
 /**
- * 플레이어에게 카드 배분 (게임 시작시 6장씩)
+ * 플레이어에게 카드 배분 (게임 시작시 각 카드 타입을 1~2장씩 배분)
  */
 export function generatePlayerCards(): CardType[] {
   const cards: CardType[] = [];
   
-  // 승객 카드 4장, 추종자 카드 1장, 하이재커 카드 1장
-  for (let i = 0; i < 4; i++) {
-    cards.push('passenger');
-  }
-  cards.push('follower');
-  cards.push('hijacker');
+  // 각 카드 타입별로 1~2장씩 배분
+  cards.push('passenger', 'passenger');  // 승객 2장
+  cards.push('follower');               // 추종자 1장
+  cards.push('hijacker');               // 하이재커 1장
+  cards.push('baby');                   // 우는 애기 1장
+  cards.push('couple');                 // 연인 1장
+  cards.push('single');                 // 모태솔로 1장
   
   // 카드 섞기
   return shuffleArray(cards);
@@ -37,78 +38,127 @@ export function generateAirplaneNumbers(): number[] {
 }
 
 /**
- * 라운드 점수 계산
- * @param airplanePassengers 각 비행기별 승객 수
- * @param playerAirplane 플레이어가 선택한 비행기 번호
- * @param playerCard 플레이어가 사용한 카드 타입
- * @param maxPassengers 해당 비행기의 최대 탑승객 수
+ * 전체 게임 점수 계산
+ * @param playerActions 모든 플레이어의 행동 정보
  */
-export function calculateRoundScore(
-  airplanePassengers: Record<number, number>,
-  playerAirplane: number,
-  playerCard: CardType,
-  maxPassengers: number
-): number {
-  const passengersOnAirplane = airplanePassengers[playerAirplane] || 0;
-  
-  // 최대 탑승객 수를 초과하면 0점 처리
-  if (passengersOnAirplane > maxPassengers) {
-    return 0;
-  }
-  
-  switch (playerCard) {
-    case 'passenger':
-      // 승객: 해당 비행기의 승객 수만큼 점수
-      return passengersOnAirplane;
-    
-    case 'follower':
-      // 추종자: 가장 많은 승객이 있는 비행기와 같은 비행기면 점수, 아니면 0점
-      const maxPassengers = Math.max(...Object.values(airplanePassengers));
-      return passengersOnAirplane === maxPassengers ? maxPassengers : 0;
-    
-    case 'hijacker':
-      // 하이재커: 해당 비행기에 승객이 있으면 모든 승객이 0점이 되고, 하이재커만 점수
-      return passengersOnAirplane > 0 ? passengersOnAirplane : 0;
-    
-    default:
-      return 0;
-  }
-}
-/**
- * 하이재커 효과 적용
- * 하이재커가 있는 비행기의 다른 모든 카드는 0점 처리
- */
-export function applyHijackerEffect(
+export function calculateGameScore(
   playerActions: Array<{
     playerId: string;
+    username: string;
     airplaneNumber: number;
     cardType: CardType;
-    baseScore: number;
   }>
 ): Array<{
   playerId: string;
+  username: string;
   airplaneNumber: number;
   cardType: CardType;
   finalScore: number;
 }> {
-  // 하이재커가 있는 비행기 찾기
-  const hijackedAirplanes = new Set<number>();
-  
+  // 각 비행기별로 승객 정보 정리
+  const airplaneData: Record<number, Array<{
+    playerId: string;
+    username: string;
+    cardType: CardType;
+  }>> = {};
+
+  // 비행기별 승객 정보 수집
   playerActions.forEach(action => {
-    if (action.cardType === 'hijacker') {
-      hijackedAirplanes.add(action.airplaneNumber);
+    if (!airplaneData[action.airplaneNumber]) {
+      airplaneData[action.airplaneNumber] = [];
+    }
+    airplaneData[action.airplaneNumber].push({
+      playerId: action.playerId,
+      username: action.username,
+      cardType: action.cardType
+    });
+  });
+
+  // 각 플레이어의 점수 계산
+  const results: Array<{
+    playerId: string;
+    username: string;
+    airplaneNumber: number;
+    cardType: CardType;
+    finalScore: number;
+  }> = [];
+
+  playerActions.forEach(action => {
+    const airplanePassengers = airplaneData[action.airplaneNumber];
+    const totalPassengers = airplanePassengers.length;
+    
+    // 카드 타입별 개수 계산
+    const cardCounts = {
+      passenger: airplanePassengers.filter(p => p.cardType === 'passenger').length,
+      follower: airplanePassengers.filter(p => p.cardType === 'follower').length,
+      hijacker: airplanePassengers.filter(p => p.cardType === 'hijacker').length,
+      baby: airplanePassengers.filter(p => p.cardType === 'baby').length,
+      couple: airplanePassengers.filter(p => p.cardType === 'couple').length,
+      single: airplanePassengers.filter(p => p.cardType === 'single').length
+    };
+
+    let finalScore = 0;
+
+    switch (action.cardType) {
+      case 'passenger':
+        // 승객: 함께 탑승한 승객 수 × 2점
+        finalScore = (totalPassengers - 1) * 2;
+        break;
+
+      case 'hijacker':
+        // 하이재커: 함께 탑승한 승객 수 × 3점, 추종자가 있으면 추종자 수 × 3점 차감
+        finalScore = (totalPassengers - 1) * 3 - (cardCounts.follower * 3);
+        break;
+
+      case 'follower':
+        // 추종자: 탑승한 비행기에 하이재커가 있을 경우 7점
+        finalScore = cardCounts.hijacker > 0 ? 7 : 0;
+        break;
+
+      case 'baby':
+        // 우는 애기: 본인: 함께 탑승한 승객 수 × 2점
+        finalScore = (totalPassengers - 1) * 2;
+        break;
+
+      case 'couple':
+        // 연인: 기본 점수: 함께 탑승한 승객 수 × 2점, 추가 점수: 연인 수 × 1점 (본인 제외)
+        finalScore = (totalPassengers - 1) * 2 + (cardCounts.couple - 1) * 1;
+        break;
+
+      case 'single':
+        // 모태솔로: 기본 점수: 함께 탑승한 승객 수 × 3점, 감점: 연인 수 × 1점
+        finalScore = (totalPassengers - 1) * 3 - (cardCounts.couple * 1);
+        break;
+
+      default:
+        finalScore = 0;
+    }
+
+    results.push({
+      playerId: action.playerId,
+      username: action.username,
+      airplaneNumber: action.airplaneNumber,
+      cardType: action.cardType,
+      finalScore: Math.max(0, finalScore) // 음수 방지
+    });
+  });
+
+  // 우는 애기 효과 적용 (다른 승객들 각각 1점 차감)
+  playerActions.forEach(action => {
+    if (action.cardType === 'baby') {
+      const airplanePassengers = airplaneData[action.airplaneNumber];
+      
+      // 같은 비행기의 다른 승객들에게 1점씩 차감
+      results.forEach(result => {
+        if (result.airplaneNumber === action.airplaneNumber && 
+            result.playerId !== action.playerId) {
+          result.finalScore = Math.max(0, result.finalScore - 1);
+        }
+      });
     }
   });
-  
-  // 최종 점수 계산
-  return playerActions.map(action => ({
-    playerId: action.playerId,
-    airplaneNumber: action.airplaneNumber,
-    cardType: action.cardType,
-    finalScore: hijackedAirplanes.has(action.airplaneNumber) && action.cardType !== 'hijacker' 
-      ? 0 
-      : action.baseScore
-  }));
+
+  return results;
 }
 
 /**
@@ -138,13 +188,13 @@ export function getNextPhase(currentPhase: string): string {
 export function getPhaseTimeLimit(phase: string): number {
   switch (phase) {
     case 'airplane_selection':
-      return 15; // 30초
+      return 15;
     case 'discussion':
-      return 10; // 30초
+      return 10;
     case 'card_selection':
-      return 15; // 30초
+      return 15;
     case 'results':
-      return 30; // 30초로 변경
+      return 30;
     default:
       return 0;
   }
