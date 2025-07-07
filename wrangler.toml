@@ -1,5 +1,6 @@
 name = "airplane-hijacking"
 compatibility_date = "2024-12-19"
+compatibility_flags = ["nodejs_compat"]
 
 # Cloudflare Pages 빌드 출력 디렉토리
 pages_build_output_dir = ".vercel/output/static"
@@ -7,6 +8,7 @@ pages_build_output_dir = ".vercel/output/static"
 # 환경 변수 설정 (민감한 정보는 Cloudflare Dashboard에서 설정)
 [env.production]
 name = "airplane-hijacking"
+compatibility_flags = ["nodejs_compat"]
 
 [env.production.vars]
 NODE_ENV = "production" 
