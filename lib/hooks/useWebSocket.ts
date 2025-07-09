@@ -24,10 +24,19 @@ export function useWebSocket(roomCode: string, userId: string): UseWebSocketResu
     if (!roomCode || !userId || !mountedRef.current) return;
 
     try {
-      const protocol = process.env.NODE_ENV === 'production' ? 'wss' : 'ws';
-      const host = process.env.NEXT_PUBLIC_WS_HOST || window.location.hostname;
-      const port = process.env.NEXT_PUBLIC_WS_PORT || '8080';
-      const wsUrl = `${protocol}://${host}:${port}`;
+          // WebSocket URL 구성 - Cloudflare Workers 지원
+      let wsUrl: string;
+      
+      if (process.env.NEXT_PUBLIC_WS_URL) {
+        // 환경변수로 전체 WebSocket URL 지정
+        wsUrl = process.env.NEXT_PUBLIC_WS_URL;
+      } else {
+        // 기본 로컬 개발 설정
+        const protocol = process.env.NODE_ENV === 'production' ? 'wss' : 'ws';
+        const host = process.env.NEXT_PUBLIC_WS_HOST || window.location.hostname;
+        const port = process.env.NEXT_PUBLIC_WS_PORT || '8080';
+        wsUrl = `${protocol}://${host}:${port}`;
+      }
       
       console.log('[WebSocket] Connecting to:', wsUrl);
       const ws = new WebSocket(wsUrl);
