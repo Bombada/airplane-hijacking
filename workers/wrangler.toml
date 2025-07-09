@@ -1,18 +1,12 @@
-name = "airplane-hijacking-websocket"
-compatibility_date = "2024-12-19"
-compatibility_flags = ["nodejs_compat"]
-
+name = "airplane-hijacking-websocket-v2"
 main = "websocket.js"
+compatibility_date = "2023-12-01"
 
-# Durable Objects 설정
-[[durable_objects.bindings]]
-name = "GAME_ROOMS"
-class_name = "GameRoom"
+[durable_objects]
+bindings = [
+  { name = "WEBSOCKET_DURABLE_OBJECT", class_name = "WebSocketDurableObject" }
+]
 
-[[durable_objects.migrations]]
+[[migrations]]
 tag = "v1"
-new_classes = ["GameRoom"]
-
-# 환경 변수
-[vars]
-NODE_ENV = "production" 
+new_sqlite_classes = ["WebSocketDurableObject"] 

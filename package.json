@@ -33,6 +33,6 @@
   "devDependencies": {
     "@cloudflare/next-on-pages": "^1.13.12",
     "concurrently": "^9.2.0",
-    "wrangler": "^4.23.0"
+    "wrangler": "^4.24.0"
   }
 }

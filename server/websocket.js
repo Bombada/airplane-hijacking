@@ -155,6 +155,50 @@ wss.on('connection', (ws, req) => {
           }
           break;
 
+        case 'countdown_start':
+          if (currentRoom) {
+            console.log(`Countdown start for room ${currentRoom}: ${data.countdown}s`);
+            
+            // Broadcast countdown start to all clients in the room
+            const countdownMessage = {
+              type: 'countdown_start',
+              roomCode: currentRoom,
+              countdown: data.countdown
+            };
+            
+            const roomClients = rooms.get(currentRoom);
+            if (roomClients) {
+              roomClients.forEach((clientWs, clientUserId) => {
+                if (clientWs.readyState === WebSocket.OPEN) {
+                  clientWs.send(JSON.stringify(countdownMessage));
+                }
+              });
+            }
+          }
+          break;
+
+        case 'countdown_update':
+          if (currentRoom) {
+            console.log(`Countdown update for room ${currentRoom}: ${data.countdown}s`);
+            
+            // Broadcast countdown update to all clients in the room
+            const countdownMessage = {
+              type: 'countdown_update',
+              roomCode: currentRoom,
+              countdown: data.countdown
+            };
+            
+            const roomClients = rooms.get(currentRoom);
+            if (roomClients) {
+              roomClients.forEach((clientWs, clientUserId) => {
+                if (clientWs.readyState === WebSocket.OPEN) {
+                  clientWs.send(JSON.stringify(countdownMessage));
+                }
+              });
+            }
+          }
+          break;
+
         default:
           console.log('Unknown message type:', data.type);
       }
@@ -202,19 +246,36 @@ function broadcastToRoom(roomCode, message, excludeUserId = null) {
   });
 }
 
+// Health check endpoint
+server.on('request', (req, res) => {
+  if (req.url === '/health' || req.url === '/') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      connections: Array.from(rooms.entries()).map(([roomCode, clients]) => ({
+        roomCode,
+        clientCount: clients.size
+      }))
+    }));
+  } else {
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.end('Not Found');
+  }
+});
+
 // Start server
-const PORT = process.env.WS_PORT || 8080;
+const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
-  console.log(`WebSocket server is running on port ${PORT}`);
+  console.log(`WebSocket server running on port ${PORT}`);
+  console.log(`Health check available at http://localhost:${PORT}/health`);
 });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
-  console.log('Shutting down WebSocket server...');
-  wss.close(() => {
-    server.close(() => {
-      console.log('WebSocket server closed');
-      process.exit(0);
-    });
+  console.log('Received SIGTERM, shutting down gracefully...');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
   });
 }); 
