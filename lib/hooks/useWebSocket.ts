@@ -28,11 +28,14 @@ export function useWebSocket(roomCode: string, userId: string): UseWebSocketResu
       let wsUrl: string;
       
       if (process.env.NEXT_PUBLIC_WS_URL) {
-        // 환경변수로 전체 WebSocket URL 지정
-        wsUrl = process.env.NEXT_PUBLIC_WS_URL;
+        // 환경변수로 전체 WebSocket URL 지정 (Cloudflare Workers)
+        wsUrl = `${process.env.NEXT_PUBLIC_WS_URL}?room=${roomCode}`;
+      } else if (process.env.NODE_ENV === 'production') {
+        // 프로덕션 환경에서 환경변수가 없는 경우 하드코딩된 URL 사용
+        wsUrl = `wss://airplane-hijacking-websocket.affectome22.workers.dev?room=${roomCode}`;
       } else {
         // 기본 로컬 개발 설정
-        const protocol = process.env.NODE_ENV === 'production' ? 'wss' : 'ws';
+        const protocol = 'ws';
         const host = process.env.NEXT_PUBLIC_WS_HOST || window.location.hostname;
         const port = process.env.NEXT_PUBLIC_WS_PORT || '8080';
         wsUrl = `${protocol}://${host}:${port}`;
