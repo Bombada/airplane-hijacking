@@ -12,6 +12,7 @@ import DiscussionPhase from './components/DiscussionPhase';
 import CardSelection from './components/CardSelection';
 import ResultsPhase from './components/ResultsPhase';
 import FinalRankings from './components/FinalRankings';
+import GameRules from './components/GameRules';
 
 export default function GameRoomPage() {
   const params = useParams();
@@ -24,6 +25,9 @@ export default function GameRoomPage() {
   
   // 로컬 카드 선택 상태 (즉시 UI 업데이트용)
   const [localSelectedCard, setLocalSelectedCard] = useState<string | undefined>(undefined);
+  
+  // 게임 방법 모달 상태
+  const [showGameRules, setShowGameRules] = useState(false);
 
   // 실시간 게임 상태 (WebSocket)
   const { gameState, loading, error, isConnected, sendAction, sendCountdownMessage, refetch, countdownState } = useGameStateWS(roomCode, userId);
@@ -269,6 +273,19 @@ export default function GameRoomPage() {
       case 'waiting':
         return (
           <div className="space-y-6">
+            {/* 게임 방법 보기 버튼 */}
+            <div className="text-center">
+              <button
+                onClick={() => setShowGameRules(true)}
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium inline-flex items-center space-x-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span>게임 방법 보기</span>
+              </button>
+            </div>
+            
             <PlayerList 
               players={gameState.players}
               currentUserId={userId}
@@ -355,7 +372,7 @@ export default function GameRoomPage() {
             onSelectAirplane={(airplaneId: string) => handlePlayerAction('select_airplane', airplaneId)}
             selectedAirplane={selectedAirplane}
             currentUserId={userId || ''}
-            phaseStartTime={gameState.gameRoom.phase_start_time}
+            phaseStartTime={gameState.gameRoom.phase_start_time || new Date().toISOString()}
             roomCode={roomCode}
           />
         );
@@ -365,7 +382,7 @@ export default function GameRoomPage() {
           <DiscussionPhase 
             players={gameState.players} 
             currentRound={gameState.currentRound}
-            phaseStartTime={gameState.gameRoom.phase_start_time}
+            phaseStartTime={gameState.gameRoom.phase_start_time || new Date().toISOString()}
             roomCode={roomCode}
             airplanes={gameState.airplanes || []}
             allPlayerActions={gameState.allPlayerActions || []}
@@ -416,12 +433,12 @@ export default function GameRoomPage() {
           <CardSelection 
             cards={gameState.myCards || []} 
             onSelectCard={handleCardSelection}
-            selectedCard={selectedCard}
-            phaseStartTime={gameState.gameRoom.phase_start_time}
+            selectedCard={selectedCard || ''}
+            phaseStartTime={gameState.gameRoom.phase_start_time || new Date().toISOString()}
             roomCode={roomCode}
-            airplanes={gameState.airplanes}
+            airplanes={gameState.airplanes || []}
             players={gameState.players}
-            allPlayerActions={gameState.allPlayerActions}
+            allPlayerActions={gameState.allPlayerActions || []}
           />
         );
 
@@ -431,10 +448,7 @@ export default function GameRoomPage() {
             roomCode={roomCode}
             userId={userId}
             currentRound={gameState.currentRound}
-            phaseStartTime={gameState.gameRoom.phase_start_time}
-            airplanes={gameState.airplanes}
-            players={gameState.players}
-            allPlayerActions={gameState.allPlayerActions}
+            phaseStartTime={gameState.gameRoom.phase_start_time || new Date().toISOString()}
           />
         );
 
@@ -493,6 +507,12 @@ export default function GameRoomPage() {
           {renderGameContent()}
         </div>
       </div>
+
+      {/* 게임 방법 모달 */}
+      <GameRules 
+        isOpen={showGameRules}
+        onClose={() => setShowGameRules(false)}
+      />
     </div>
   );
 } 

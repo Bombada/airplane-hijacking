@@ -28,9 +28,9 @@ export default function AirplanePassengers({ airplanes, players, allPlayerAction
           <div key={airplaneNumber} className="p-4 border rounded-lg bg-white/5">
             <h4 className="font-medium">비행기 {airplaneNumber}번</h4>
             <div className="mt-2">
-              {passengers.length > 0 ? (
+              {(passengers as string[]).length > 0 ? (
                 <ul className="list-disc list-inside">
-                  {passengers.map((username, idx) => (
+                  {(passengers as string[]).map((username: string, idx: number) => (
                     <li key={idx} className="text-sm">{username}</li>
                   ))}
                 </ul>
