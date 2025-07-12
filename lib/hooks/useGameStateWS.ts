@@ -38,6 +38,8 @@ export function useGameStateWS(roomCode: string, userId: string): UseGameStateWS
     active: false,
     countdown: null as number | null
   });
+  const [lastRound, setLastRound] = useState<number | null>(null);
+  const [lastGameStatus, setLastGameStatus] = useState<string | null>(null);
   
   const { isConnected, sendMessage, lastMessage } = useWebSocket(roomCode, userId);
   const mountedRef = useRef(true);
@@ -194,11 +196,9 @@ export function useGameStateWS(roomCode: string, userId: string): UseGameStateWS
         console.log('[GameStateWS] Phase changed to:', lastMessage.phase);
         // Immediately refresh game state when phase changes
         setTimeout(() => fetchGameState(), 100);
-        // Also reload the page to ensure clean state
-        console.log('[GameStateWS] Reloading page due to admin phase change');
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
+        // Force multiple refreshes to ensure state sync
+        setTimeout(() => fetchGameState(), 500);
+        setTimeout(() => fetchGameState(), 1000);
         break;
 
       case 'game_finished':
@@ -214,11 +214,28 @@ export function useGameStateWS(roomCode: string, userId: string): UseGameStateWS
 
       case 'admin_state_change':
         console.log('[GameStateWS] Admin state change detected:', lastMessage);
-        // Reload page when admin makes any state changes
-        console.log('[GameStateWS] Reloading page due to admin state change');
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
+        
+        // Immediately refresh game state
+        setTimeout(() => fetchGameState(), 100);
+        
+        // Handle specific admin actions
+        if (lastMessage.action === 'game_start') {
+          console.log('[GameStateWS] Game start detected, forcing page reload');
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
+        } else if (lastMessage.action === 'next_round') {
+          console.log('[GameStateWS] Next round detected, forcing page reload');
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
+        } else {
+          // For other admin changes, reload page after a delay
+          console.log('[GameStateWS] Reloading page due to admin state change');
+          setTimeout(() => {
+            window.location.reload();
+          }, 500);
+        }
         break;
 
       case 'countdown_start':
@@ -256,6 +273,42 @@ export function useGameStateWS(roomCode: string, userId: string): UseGameStateWS
       fetchGameState();
     }
   }, [isConnected, userId]);
+
+  // Monitor round changes and force refresh
+  useEffect(() => {
+    if (gameState?.gameRoom?.current_round && lastRound !== null) {
+      const currentRound = gameState.gameRoom.current_round;
+      if (currentRound !== lastRound) {
+        console.log(`[GameStateWS] Round changed from ${lastRound} to ${currentRound}, forcing page refresh`);
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      }
+    }
+    
+    // Update lastRound
+    if (gameState?.gameRoom?.current_round) {
+      setLastRound(gameState.gameRoom.current_round);
+    }
+  }, [gameState?.gameRoom?.current_round, lastRound]);
+
+  // Monitor game status changes (waiting -> playing)
+  useEffect(() => {
+    if (gameState?.gameRoom?.status && lastGameStatus !== null) {
+      const currentStatus = gameState.gameRoom.status;
+      if (currentStatus !== lastGameStatus) {
+        console.log(`[GameStateWS] Game status changed from ${lastGameStatus} to ${currentStatus}, forcing page refresh`);
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      }
+    }
+    
+    // Update lastGameStatus
+    if (gameState?.gameRoom?.status) {
+      setLastGameStatus(gameState.gameRoom.status);
+    }
+  }, [gameState?.gameRoom?.status, lastGameStatus]);
 
   return {
     gameState,

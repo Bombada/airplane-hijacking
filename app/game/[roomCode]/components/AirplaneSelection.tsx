@@ -45,6 +45,12 @@ export default function AirplaneSelection({
   roomCode
 }: AirplaneSelectionProps) {
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+  const [phaseTransitionAttempted, setPhaseTransitionAttempted] = useState(false);
+
+  // Reset phase transition flag when phase starts
+  useEffect(() => {
+    setPhaseTransitionAttempted(false);
+  }, [phaseStartTime]);
 
   // Timer logic
   useEffect(() => {
@@ -54,7 +60,7 @@ export default function AirplaneSelection({
     }
 
     const startTime = new Date(phaseStartTime).getTime();
-    const duration = 40 * 1000; // 15 seconds
+    const duration = 40 * 1000; // 40 seconds
     const endTime = startTime + duration;
 
     const timer = setInterval(() => {
@@ -70,14 +76,22 @@ export default function AirplaneSelection({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [phaseStartTime]);
+  }, [phaseStartTime, phaseTransitionAttempted]);
 
   // Function to handle phase transition
   const handleNextPhase = async () => {
+    if (phaseTransitionAttempted) {
+      console.log('[AirplaneSelection] Phase transition already attempted, skipping');
+      return;
+    }
+    
+    setPhaseTransitionAttempted(true);
+    
     try {
       const port = window.location.port;
       const baseUrl = port ? `http://localhost:${port}` : window.location.origin;
       
+      console.log('[AirplaneSelection] Attempting phase transition to discussion');
       const response = await fetch(`${baseUrl}/api/admin/rooms/${roomCode}/phase`, {
         method: 'POST',
         headers: {
@@ -88,11 +102,20 @@ export default function AirplaneSelection({
         }),
       });
 
-      if (!response.ok) {
+      if (response.ok) {
+        console.log('[AirplaneSelection] Phase transition API call successful');
+        // Force page refresh after successful phase change
+        setTimeout(() => {
+          console.log('[AirplaneSelection] Forcing page refresh after phase transition');
+          window.location.reload();
+        }, 1000);
+      } else {
         console.error('Failed to progress to next phase:', response.status);
+        setPhaseTransitionAttempted(false); // Reset so it can be retried
       }
     } catch (error) {
       console.error('Error progressing to next phase:', error);
+      setPhaseTransitionAttempted(false); // Reset so it can be retried
     }
   };
 
@@ -193,20 +216,20 @@ export default function AirplaneSelection({
 
       {/* 타이머 */}
       {timeRemaining !== null && (
-        <div className="text-center mb-8">
+        <div className="flex flex-col items-center justify-center mb-8">
           <div className={`text-4xl font-bold ${getTimerColor()} mb-2`}>
             {formatTime(timeRemaining)}
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-3 max-w-md mx-auto">
+          <div className="w-full max-w-md bg-gray-200 rounded-full h-3">
             <div 
               className={`h-3 rounded-full transition-all duration-1000 ${
                 timeRemaining > 10000 ? 'bg-green-500' : 
                 timeRemaining > 5000 ? 'bg-yellow-500' : 'bg-red-500'
               }`}
-              style={{ width: `${(timeRemaining / 15000) * 100}%` }}
+              style={{ width: `${(timeRemaining / (40 * 1000)) * 100}%` }}
             ></div>
           </div>
-          <p className="text-sm text-gray-600 mt-2">
+          <p className="text-sm text-gray-600 mt-2 text-center">
             남은 시간: {formatTime(timeRemaining)}
           </p>
         </div>
@@ -229,7 +252,7 @@ export default function AirplaneSelection({
             >
               <div className="text-center">
                 <h3 className="text-lg font-semibold mb-2">
-                  {getAirplaneEmoji(airplane.airplane_number)} 비행기 {airplane.airplane_number}
+                {getAirplaneEmoji(airplane.airplane_number)} 비행기 {airplane.airplane_number}
                 </h3>
                 
                 {isSelected && (

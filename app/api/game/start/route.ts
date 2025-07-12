@@ -6,6 +6,67 @@ import { generatePlayerCards, generateAirplaneNumbers } from '@/lib/game/gameLog
 import { ApiResponse } from '@/types/database';
 import mockGameState from '@/lib/game/mockGameState';
 
+// Function to send WebSocket notification for game start
+async function sendGameStartNotification(roomCode: string) {
+  return new Promise<void>((resolve) => {
+    try {
+      const WebSocket = require('ws');
+      const ws = new WebSocket('ws://localhost:8080');
+      
+      const timeout = setTimeout(() => {
+        console.log('[GameStart] WebSocket notification timeout');
+        ws.close();
+        resolve();
+      }, 5000);
+      
+      ws.on('open', () => {
+        console.log(`[GameStart] Sending game start notification for room ${roomCode}`);
+        
+        // Join the room as admin
+        ws.send(JSON.stringify({
+          type: 'join_room',
+          roomCode: roomCode,
+          userId: 'admin'
+        }));
+        
+        // Send game start notification after a short delay
+        setTimeout(() => {
+          ws.send(JSON.stringify({
+            type: 'admin_state_change',
+            roomCode: roomCode,
+            action: 'game_start',
+            details: {
+              phase: 'airplane_selection',
+              round: 1
+            }
+          }));
+          
+          // Close connection and resolve
+          setTimeout(() => {
+            clearTimeout(timeout);
+            ws.close();
+            resolve();
+          }, 200);
+        }, 200);
+      });
+      
+      ws.on('error', (error: any) => {
+        console.error('WebSocket error in game start notification:', error);
+        clearTimeout(timeout);
+        resolve(); // Don't fail the API call
+      });
+      
+      ws.on('close', () => {
+        clearTimeout(timeout);
+        resolve();
+      });
+    } catch (error) {
+      console.error('Error creating WebSocket connection:', error);
+      resolve(); // Don't fail the API call
+    }
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { roomCode, userId } = await request.json();
@@ -175,6 +236,14 @@ export async function POST(request: NextRequest) {
         }, { status: 500 });
       }
 
+      // Send WebSocket notification to all players in the room
+      try {
+        await sendGameStartNotification(roomCode);
+      } catch (error) {
+        console.error('Failed to send WebSocket notification:', error);
+        // Don't fail the API request if WebSocket fails
+      }
+
       return NextResponse.json<ApiResponse<any>>({
         data: {
           gameRoom: updatedRoom,
@@ -241,6 +310,14 @@ export async function POST(request: NextRequest) {
         current_phase: 'airplane_selection',
         phase_start_time: new Date().toISOString()
       });
+
+      // Send WebSocket notification to all players in the room
+      try {
+        await sendGameStartNotification(roomCode);
+      } catch (error) {
+        console.error('Failed to send WebSocket notification:', error);
+        // Don't fail the API request if WebSocket fails
+      }
 
       return NextResponse.json<ApiResponse<any>>({
         data: {

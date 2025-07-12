@@ -25,6 +25,12 @@ export default function DiscussionPhase({
   currentUserId
 }: DiscussionPhaseProps) {
   const [timeRemaining, setTimeRemaining] = useState(120); // 2분
+  const [phaseTransitionAttempted, setPhaseTransitionAttempted] = useState(false);
+
+  // Reset phase transition flag when phase starts
+  useEffect(() => {
+    setPhaseTransitionAttempted(false);
+  }, [phaseStartTime]);
 
   useEffect(() => {
     if (!phaseStartTime) return;
@@ -46,14 +52,22 @@ export default function DiscussionPhase({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [phaseStartTime]);
+  }, [phaseStartTime, phaseTransitionAttempted]);
 
   // Function to handle phase transition
   const handleNextPhase = async () => {
+    if (phaseTransitionAttempted) {
+      console.log('[DiscussionPhase] Phase transition already attempted, skipping');
+      return;
+    }
+    
+    setPhaseTransitionAttempted(true);
+    
     try {
       const port = window.location.port;
       const baseUrl = port ? `http://localhost:${port}` : window.location.origin;
       
+      console.log('[DiscussionPhase] Attempting phase transition to card_selection');
       const response = await fetch(`${baseUrl}/api/admin/rooms/${roomCode}/phase`, {
         method: 'POST',
         headers: {
@@ -64,11 +78,20 @@ export default function DiscussionPhase({
         }),
       });
 
-      if (!response.ok) {
+      if (response.ok) {
+        console.log('[DiscussionPhase] Phase transition API call successful');
+        // Force page refresh after successful phase change
+        setTimeout(() => {
+          console.log('[DiscussionPhase] Forcing page refresh after phase transition');
+          window.location.reload();
+        }, 1000);
+      } else {
         console.error('Failed to progress to next phase:', response.status);
+        setPhaseTransitionAttempted(false); // Reset so it can be retried
       }
     } catch (error) {
       console.error('Error progressing to next phase:', error);
+      setPhaseTransitionAttempted(false); // Reset so it can be retried
     }
   };
 

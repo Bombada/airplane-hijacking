@@ -22,6 +22,7 @@ export default function ResultsPhase({
   const [resultsCalculated, setResultsCalculated] = useState(false);
   const [lastCalculatedRound, setLastCalculatedRound] = useState<number | null>(null);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);  // Add timer state
+  const [nextRoundAttempted, setNextRoundAttempted] = useState(false);  // Add to prevent race condition
 
   const calculateResults = async () => {
     if (!userId || calculating || resultsCalculated) return;
@@ -70,6 +71,7 @@ export default function ResultsPhase({
       setResultsCalculated(false);
       setResults(null);
       setLoading(true);
+      setNextRoundAttempted(false); // Reset next round attempt flag
     }
   }, [currentRound?.round_number, lastCalculatedRound]);
 
@@ -108,16 +110,24 @@ export default function ResultsPhase({
 
   // Function to handle phase transition
   const handleNextPhase = async () => {
+    // Prevent multiple attempts
+    if (nextRoundAttempted) {
+      console.log('[ResultsPhase] Next round already attempted, skipping');
+      return;
+    }
+
+    // If this is the last round, finish the game
+    if (currentRound?.round_number >= 5) {
+      return;
+    }
+
+    setNextRoundAttempted(true);
+    
     try {
       const port = window.location.port;
       const baseUrl = port ? `http://localhost:${port}` : window.location.origin;
       
-      // If this is the last round, finish the game
-      if (currentRound?.round_number >= 5) {
-        return;
-      }
-
-      // Otherwise, start the next round
+      console.log('[ResultsPhase] Attempting to start next round');
       const response = await fetch(`${baseUrl}/api/admin/rooms/${roomCode}/next-round`, {
         method: 'POST',
         headers: {
@@ -125,11 +135,33 @@ export default function ResultsPhase({
         },
       });
 
-      if (!response.ok) {
-        console.error('Failed to start next round:', response.status);
+      if (response.ok) {
+        console.log('[ResultsPhase] Next round API call successful');
+        const result = await response.json();
+        console.log('[ResultsPhase] Next round response:', result);
+        
+        // Force page refresh after successful next round
+        setTimeout(() => {
+          console.log('[ResultsPhase] Forcing page refresh after next round');
+          window.location.reload();
+        }, 1000);
+      } else {
+        const errorData = await response.json();
+        console.log('[ResultsPhase] Next round failed:', response.status, errorData);
+        
+        // If it failed because someone else already started it, that's fine
+        if (errorData.error === 'Can only start next round from results phase') {
+          console.log('[ResultsPhase] Another client already started next round, refreshing page');
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
+        } else {
+          setNextRoundAttempted(false); // Reset for retry
+        }
       }
     } catch (error) {
       console.error('Error starting next round:', error);
+      setNextRoundAttempted(false); // Reset for retry
     }
   };
 
