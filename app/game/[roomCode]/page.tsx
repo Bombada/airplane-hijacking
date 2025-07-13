@@ -31,6 +31,11 @@ export default function GameRoomPage() {
 
   // 실시간 게임 상태 (WebSocket)
   const { gameState, loading, error, isConnected, sendAction, sendCountdownMessage, refetch, countdownState } = useGameStateWS(roomCode, userId);
+  
+  // WebSocket 연결 상태 디버깅
+  useEffect(() => {
+    console.log('[GamePage] WebSocket connection status:', isConnected);
+  }, [isConnected]);
 
   // 자동 게임 시작 카운트다운
   const [autoStartCountdown, setAutoStartCountdown] = useState<number | null>(null);
@@ -128,7 +133,9 @@ export default function GameRoomPage() {
             }).then(response => {
               if (response.ok) {
                 console.log('[GamePage] Game started successfully');
-                setTimeout(() => refetch(), 500);
+                // 즉시 페이지 새로고침
+                console.log('[GamePage] Reloading page after game start');
+                window.location.reload();
               } else {
                 console.error('Start game failed');
               }
@@ -195,8 +202,9 @@ export default function GameRoomPage() {
 
       if (response.ok) {
         console.log('[GamePage] Game started successfully');
-        // WebSocket으로 게임 시작 알림
-        setTimeout(() => refetch(), 500);
+        // 즉시 페이지 새로고침
+        console.log('[GamePage] Reloading page after manual game start');
+        window.location.reload();
       } else {
         const result = await response.json();
         console.error('Start game failed:', result.error);

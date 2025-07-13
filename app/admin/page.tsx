@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useWebSocket } from '@/lib/hooks/useWebSocket';
 
 interface GameRoom {
   id: string;
@@ -53,6 +54,10 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  // Add admin WebSocket connection
+  const [adminRoomCode, setAdminRoomCode] = useState<string | null>(null);
+  const { sendMessage: sendAdminWSMessage } = useWebSocket(adminRoomCode || '', 'admin');
 
   // Fetch all game rooms
   const fetchGameRooms = async () => {
@@ -109,7 +114,12 @@ export default function AdminPage() {
         throw new Error(errorData.error || 'Failed to change phase');
       }
       
-      console.log(`[Admin] Phase changed to ${phase} for room ${roomCode}`);
+      // WebSocket broadcast
+      sendAdminWSMessage({
+        type: 'phase_change',
+        phase,
+        roomCode
+      });
       
       // Wait a moment for WebSocket notification to be sent, then refresh
       setTimeout(async () => {
@@ -155,6 +165,13 @@ export default function AdminPage() {
       });
       if (!response.ok) throw new Error('Failed to start game');
       
+      // WebSocket broadcast
+      sendAdminWSMessage({
+        type: 'admin_state_change',
+        action: 'game_started',
+        roomCode,
+        details: { status: 'playing', phase: 'airplane_selection' }
+      });
       await fetchRoomDetails(roomCode);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -190,6 +207,13 @@ export default function AdminPage() {
         throw new Error(error.error || 'Failed to start next round');
       }
       
+      // WebSocket broadcast
+      sendAdminWSMessage({
+        type: 'admin_state_change',
+        action: 'next_round',
+        roomCode,
+        details: { phase: 'airplane_selection' }
+      });
       await fetchRoomDetails(roomCode);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -209,6 +233,13 @@ export default function AdminPage() {
         throw new Error(error.error || 'Failed to finish game');
       }
       
+      // WebSocket broadcast
+      sendAdminWSMessage({
+        type: 'admin_state_change',
+        action: 'game_finished',
+        roomCode,
+        details: { message: 'Game has been finished' }
+      });
       await fetchRoomDetails(roomCode);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -229,6 +260,11 @@ export default function AdminPage() {
       const interval = setInterval(() => fetchRoomDetails(selectedRoom), 10000);
       return () => clearInterval(interval);
     }
+  }, [selectedRoom]);
+
+  // When selectedRoom changes, update adminRoomCode for WebSocket
+  useEffect(() => {
+    setAdminRoomCode(selectedRoom);
   }, [selectedRoom]);
 
   const getStatusColor = (status: string) => {

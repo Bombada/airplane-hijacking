@@ -1,0 +1,23 @@
+{
+  "name": "airplane-hijacking-websocket",
+  "version": "1.0.0",
+  "description": "WebSocket server for Airplane Hijacking game",
+  "main": "websocket.js",
+  "scripts": {
+    "start": "node websocket.js",
+    "dev": "node websocket.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "websocket",
+    "game",
+    "real-time"
+  ],
+  "author": "",
+  "license": "MIT"
+} 

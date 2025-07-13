@@ -13,7 +13,9 @@ async function sendAdminStateChangeNotification(roomCode: string, action: string
   return new Promise<void>((resolve) => {
     try {
       const WebSocket = require('ws');
-      const ws = new WebSocket('ws://localhost:8080');
+      const port = process.env.NEXT_PUBLIC_WS_PORT || '8080';
+      const host = process.env.NEXT_PUBLIC_WS_HOST || 'localhost';
+      const ws = new WebSocket(`ws://${host}:${port}`);
       
       const timeout = setTimeout(() => {
         console.log('[Admin] WebSocket notification timeout');
@@ -51,6 +53,65 @@ async function sendAdminStateChangeNotification(roomCode: string, action: string
       
       ws.on('error', (error: any) => {
         console.error('WebSocket error in admin state change notification:', error);
+        clearTimeout(timeout);
+        resolve(); // Don't fail the API call
+      });
+      
+      ws.on('close', () => {
+        clearTimeout(timeout);
+        resolve();
+      });
+    } catch (error) {
+      console.error('Error creating WebSocket connection:', error);
+      resolve(); // Don't fail the API call
+    }
+  });
+}
+
+// Function to send phase change notification
+async function sendPhaseChangeNotification(roomCode: string, phase: string) {
+  return new Promise<void>((resolve) => {
+    try {
+      const WebSocket = require('ws');
+      const port = process.env.NEXT_PUBLIC_WS_PORT || '8080';
+      const host = process.env.NEXT_PUBLIC_WS_HOST || 'localhost';
+      const ws = new WebSocket(`ws://${host}:${port}`);
+      
+      const timeout = setTimeout(() => {
+        console.log('[Admin] WebSocket notification timeout');
+        ws.close();
+        resolve();
+      }, 5000);
+      
+      ws.on('open', () => {
+        console.log(`[Admin] Sending phase change notification for room ${roomCode}: ${phase}`);
+        
+        // Join the room as admin
+        ws.send(JSON.stringify({
+          type: 'join_room',
+          roomCode: roomCode,
+          userId: 'admin'
+        }));
+        
+        // Send phase change notification after a short delay
+        setTimeout(() => {
+          ws.send(JSON.stringify({
+            type: 'phase_change',
+            phase: phase,
+            roomCode: roomCode
+          }));
+          
+          // Close connection and resolve
+          setTimeout(() => {
+            clearTimeout(timeout);
+            ws.close();
+            resolve();
+          }, 200);
+        }, 200);
+      });
+      
+      ws.on('error', (error: any) => {
+        console.error('WebSocket error in phase change notification:', error);
         clearTimeout(timeout);
         resolve(); // Don't fail the API call
       });
@@ -134,7 +195,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Create initial airplanes for the round
     const airplanes = [];
-    for (let i = 1; i <= 3; i++) {
+    for (let i = 1; i <= 4; i++) {
       airplanes.push({
         game_round_id: newRound.id,
         airplane_number: i
@@ -177,10 +238,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Send WebSocket notification to all players in the room
     try {
-      await sendAdminStateChangeNotification(roomCode, 'game_started', { 
-        status: 'playing',
-        phase: 'airplane_selection'
-      });
+      await sendPhaseChangeNotification(roomCode, 'airplane_selection');
     } catch (error) {
       console.error('Failed to send WebSocket notification:', error);
       // Don't fail the API request if WebSocket fails

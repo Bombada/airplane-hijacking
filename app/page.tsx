@@ -101,105 +101,292 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">✈️ 비행기 하이재킹</h1>
-          <p className="text-gray-600">심리전과 추론이 필요한 카드 게임</p>
-        </div>
-
-        <div className="space-y-6">
-          {/* 유저명 입력 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              유저명
-            </label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="유저명을 입력하세요"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-              maxLength={20}
-            />
+    <div 
+      className="min-h-screen p-4 animate-fade-in"
+      style={{ 
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
+        fontFamily: 'Inter, system-ui, -apple-system, sans-serif'
+      }}
+    >
+      <div className="flex items-center justify-center min-h-screen">
+        <div 
+          className="bg-white rounded-3xl shadow-strong p-8 w-full max-w-md animate-slide-up"
+          style={{
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 255, 255, 0.18)'
+          }}
+        >
+          <div className="text-center mb-8">
+            <h1 
+              className="text-5xl font-bold text-gray-800 mb-3"
+              style={{ 
+                fontSize: '2.5rem',
+                fontWeight: '700',
+                color: '#1f2937',
+                textShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              }}
+            >
+              ✈️ 비행기 하이재킹
+            </h1>
+            <p 
+              className="text-gray-600 text-lg font-medium"
+              style={{ 
+                color: '#6b7280',
+                fontSize: '1.125rem',
+                fontWeight: '500'
+              }}
+            >
+              심리전과 추론이 필요한 카드 게임
+            </p>
           </div>
 
-          {/* 게임 생성 */}
-          <button
-            onClick={handleCreateGame}
-            disabled={isCreating || !username.trim()}
-            className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center"
-          >
-            {isCreating ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                게임 생성 중...
-              </>
-            ) : (
-              '새 게임 만들기'
-            )}
-          </button>
-
-          {/* 구분선 */}
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
+          <div className="space-y-6">
+            {/* 유저명 입력 */}
+            <div>
+              <label 
+                className="block text-sm font-semibold text-gray-700 mb-3"
+                style={{ 
+                  color: '#374151',
+                  fontSize: '0.875rem',
+                  fontWeight: '600'
+                }}
+              >
+                유저명
+              </label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="유저명을 입력하세요"
+                className="input"
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '12px',
+                  fontSize: '1rem',
+                  transition: 'all 0.2s ease',
+                  outline: 'none',
+                  backgroundColor: '#fff'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#3b82f6';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#e5e7eb';
+                  e.target.style.boxShadow = 'none';
+                }}
+                maxLength={20}
+              />
             </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">또는</span>
+
+            {/* 게임 생성 */}
+            <button
+              onClick={handleCreateGame}
+              disabled={isCreating || !username.trim()}
+              className="w-full font-semibold py-4 px-6 rounded-xl transition-all duration-200 flex items-center justify-center"
+              style={{
+                backgroundColor: isCreating || !username.trim() ? '#d1d5db' : '#3b82f6',
+                color: '#ffffff',
+                fontSize: '1.125rem',
+                fontWeight: '600',
+                borderRadius: '12px',
+                cursor: isCreating || !username.trim() ? 'not-allowed' : 'pointer',
+                transform: isCreating || !username.trim() ? 'none' : 'translateY(0)',
+                boxShadow: isCreating || !username.trim() ? 'none' : '0 4px 14px 0 rgba(59, 130, 246, 0.3)',
+                border: 'none'
+              }}
+              onMouseEnter={(e) => {
+                if (!isCreating && username.trim()) {
+                  e.target.style.backgroundColor = '#2563eb';
+                  e.target.style.transform = 'translateY(-2px)';
+                  e.target.style.boxShadow = '0 8px 25px 0 rgba(59, 130, 246, 0.4)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isCreating && username.trim()) {
+                  e.target.style.backgroundColor = '#3b82f6';
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = '0 4px 14px 0 rgba(59, 130, 246, 0.3)';
+                }
+              }}
+            >
+              {isCreating ? (
+                <>
+                  <div className="loading-spinner mr-3"></div>
+                  게임 생성 중...
+                </>
+              ) : (
+                '🎮 새 게임 만들기'
+              )}
+            </button>
+
+            {/* 구분선 */}
+            <div className="relative py-3">
+              <div className="absolute inset-0 flex items-center">
+                <div 
+                  className="w-full border-t"
+                  style={{ borderColor: '#e5e7eb' }}
+                ></div>
+              </div>
+              <div className="relative flex justify-center">
+                <span 
+                  className="px-4 bg-white text-gray-500 font-medium"
+                  style={{ 
+                    color: '#6b7280',
+                    fontSize: '0.875rem',
+                    fontWeight: '500'
+                  }}
+                >
+                  또는
+                </span>
+              </div>
             </div>
+
+            {/* 게임 참가 */}
+            <div>
+              <label 
+                className="block text-sm font-semibold text-gray-700 mb-3"
+                style={{ 
+                  color: '#374151',
+                  fontSize: '0.875rem',
+                  fontWeight: '600'
+                }}
+              >
+                룸 코드
+              </label>
+              <input
+                type="text"
+                value={roomCode}
+                onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                placeholder="6자리 룸 코드"
+                className="input"
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '12px',
+                  fontSize: '1.125rem',
+                  fontFamily: 'Monaco, monospace',
+                  letterSpacing: '0.1em',
+                  textAlign: 'center',
+                  transition: 'all 0.2s ease',
+                  outline: 'none',
+                  backgroundColor: '#fff'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#8b5cf6';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(139, 92, 246, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#e5e7eb';
+                  e.target.style.boxShadow = 'none';
+                }}
+                maxLength={6}
+              />
+            </div>
+
+            <button
+              onClick={handleJoinGame}
+              disabled={isJoining || !username.trim() || !roomCode.trim()}
+              className="w-full font-semibold py-4 px-6 rounded-xl transition-all duration-200 flex items-center justify-center"
+              style={{
+                backgroundColor: isJoining || !username.trim() || !roomCode.trim() ? '#d1d5db' : '#8b5cf6',
+                color: '#ffffff',
+                fontSize: '1.125rem',
+                fontWeight: '600',
+                borderRadius: '12px',
+                cursor: isJoining || !username.trim() || !roomCode.trim() ? 'not-allowed' : 'pointer',
+                transform: isJoining || !username.trim() || !roomCode.trim() ? 'none' : 'translateY(0)',
+                boxShadow: isJoining || !username.trim() || !roomCode.trim() ? 'none' : '0 4px 14px 0 rgba(139, 92, 246, 0.3)',
+                border: 'none'
+              }}
+              onMouseEnter={(e) => {
+                if (!isJoining && username.trim() && roomCode.trim()) {
+                  e.target.style.backgroundColor = '#7c3aed';
+                  e.target.style.transform = 'translateY(-2px)';
+                  e.target.style.boxShadow = '0 8px 25px 0 rgba(139, 92, 246, 0.4)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isJoining && username.trim() && roomCode.trim()) {
+                  e.target.style.backgroundColor = '#8b5cf6';
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = '0 4px 14px 0 rgba(139, 92, 246, 0.3)';
+                }
+              }}
+            >
+              {isJoining ? (
+                <>
+                  <div className="loading-spinner mr-3"></div>
+                  게임 참가 중...
+                </>
+              ) : (
+                '🚀 게임 참가하기'
+              )}
+            </button>
           </div>
 
-          {/* 게임 참가 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              룸 코드
-            </label>
-            <input
-              type="text"
-              value={roomCode}
-              onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-              placeholder="6자리 룸 코드"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all text-center text-lg font-mono tracking-wider"
-              maxLength={6}
-            />
+          {/* 게임 설명 */}
+          <div 
+            className="mt-8 p-6 rounded-xl"
+            style={{
+              backgroundColor: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '16px'
+            }}
+          >
+            <h3 
+              className="font-bold text-gray-800 mb-3"
+              style={{ 
+                color: '#1f2937',
+                fontSize: '1.125rem',
+                fontWeight: '700'
+              }}
+            >
+              🎯 게임 방법
+            </h3>
+            <ul className="text-gray-600 space-y-2">
+              <li style={{ color: '#6b7280', fontSize: '0.875rem', lineHeight: '1.5' }}>
+                • 2-8명이 함께 플레이
+              </li>
+              <li style={{ color: '#6b7280', fontSize: '0.875rem', lineHeight: '1.5' }}>
+                • 5라운드 진행
+              </li>
+              <li style={{ color: '#6b7280', fontSize: '0.875rem', lineHeight: '1.5' }}>
+                • 승객, 추종자, 하이재커 카드 사용
+              </li>
+              <li style={{ color: '#6b7280', fontSize: '0.875rem', lineHeight: '1.5' }}>
+                • 심리전과 추론으로 승리하세요!
+              </li>
+            </ul>
           </div>
 
-          <button
-            onClick={handleJoinGame}
-            disabled={isJoining || !username.trim() || !roomCode.trim()}
-            className="w-full bg-purple-500 hover:bg-purple-600 disabled:bg-gray-300 text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center"
-          >
-            {isJoining ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                게임 참가 중...
-              </>
-            ) : (
-              '게임 참가하기'
-            )}
-          </button>
-        </div>
-
-        {/* 게임 설명 */}
-        <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-          <h3 className="font-semibold text-gray-800 mb-2">게임 방법</h3>
-          <ul className="text-sm text-gray-600 space-y-1">
-            <li>• 2-8명이 함께 플레이</li>
-            <li>• 5라운드 진행</li>
-            <li>• 승객, 추종자, 하이재커 카드 사용</li>
-            <li>• 심리전과 추론으로 승리하세요!</li>
-          </ul>
-        </div>
-
-        {/* 관리자 링크 */}
-        <div className="mt-4 text-center">
-          <button
-            onClick={() => router.push('/admin')}
-            className="text-sm text-gray-500 hover:text-gray-700 underline"
-          >
-            관리자 페이지
-          </button>
+          {/* 관리자 링크 */}
+          <div className="mt-6 text-center">
+            <button
+              onClick={() => router.push('/admin')}
+              className="text-sm text-gray-500 hover:text-gray-700 underline transition-colors"
+              style={{
+                color: '#6b7280',
+                fontSize: '0.875rem',
+                textDecoration: 'underline',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.color = '#374151';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.color = '#6b7280';
+              }}
+            >
+              ⚙️ 관리자 페이지
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -36,7 +36,7 @@ export default function DiscussionPhase({
     if (!phaseStartTime) return;
 
     const startTime = new Date(phaseStartTime).getTime();
-    const duration = 120 * 1000; // 2분
+    const duration = 30 * 1000; // 30초
 
     const timer = setInterval(() => {
       const now = Date.now();
