@@ -54,7 +54,7 @@ export default function AirplaneSelection({
     }
 
     const startTime = new Date(phaseStartTime).getTime();
-    const duration = 40 * 1000; // 15 seconds
+    const duration = 30 * 1000; // 15 seconds
     const endTime = startTime + duration;
 
     const timer = setInterval(() => {
@@ -88,7 +88,13 @@ export default function AirplaneSelection({
         }),
       });
 
-      if (!response.ok) {
+      if (response.ok) {
+        console.log('[AirplaneSelection] Phase changed to discussion successfully');
+        // 페이지 새로고침하여 다음 페이즈로 이동
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      } else {
         console.error('Failed to progress to next phase:', response.status);
       }
     } catch (error) {

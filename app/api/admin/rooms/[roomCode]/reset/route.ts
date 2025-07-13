@@ -12,7 +12,9 @@ async function sendAdminStateChangeNotification(roomCode: string, action: string
   return new Promise<void>((resolve) => {
     try {
       const WebSocket = require('ws');
-      const ws = new WebSocket('ws://localhost:8080');
+      const port = process.env.NEXT_PUBLIC_WS_PORT || '8080';
+      const host = process.env.NEXT_PUBLIC_WS_HOST || 'localhost';
+      const ws = new WebSocket(`ws://${host}:${port}`);
       
       const timeout = setTimeout(() => {
         console.log('[Admin] WebSocket notification timeout');

@@ -9,6 +9,65 @@ interface ApiResponse<T> {
   data?: T;
 }
 
+// Function to send WebSocket notification directly
+async function sendPhaseChangeNotification(roomCode: string, phase: string) {
+  return new Promise<void>((resolve) => {
+    try {
+      const WebSocket = require('ws');
+      const port = process.env.NEXT_PUBLIC_WS_PORT || '8080';
+      const host = process.env.NEXT_PUBLIC_WS_HOST || 'localhost';
+      const ws = new WebSocket(`ws://${host}:${port}`);
+      
+      const timeout = setTimeout(() => {
+        console.log('[Admin] WebSocket notification timeout');
+        ws.close();
+        resolve();
+      }, 5000);
+      
+      ws.on('open', () => {
+        console.log(`[Admin] Sending phase change notification for room ${roomCode}: ${phase}`);
+        
+        // Join the room as admin
+        ws.send(JSON.stringify({
+          type: 'join_room',
+          roomCode: roomCode,
+          userId: 'admin'
+        }));
+        
+        // Send phase change notification after a short delay
+        setTimeout(() => {
+          ws.send(JSON.stringify({
+            type: 'phase_change',
+            phase: phase,
+            roomCode: roomCode
+          }));
+          
+          // Close connection and resolve
+          setTimeout(() => {
+            clearTimeout(timeout);
+            ws.close();
+            resolve();
+          }, 200);
+        }, 200);
+      });
+      
+      ws.on('error', (error: any) => {
+        console.error('WebSocket error in phase change notification:', error);
+        clearTimeout(timeout);
+        resolve(); // Don't fail the API call
+      });
+      
+      ws.on('close', () => {
+        clearTimeout(timeout);
+        resolve();
+      });
+    } catch (error) {
+      console.error('Error creating WebSocket connection:', error);
+      resolve(); // Don't fail the API call
+    }
+  });
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ roomCode: string }> }
@@ -84,10 +143,16 @@ export async function POST(
 
     console.log(`[Admin] Successfully changed phase for room ${roomCode} to ${phase}`);
 
-    // Note: Real-time updates will be handled by the client-side WebSocket connections
-    // The clients will detect the phase change through polling or WebSocket messages
+    // Send WebSocket notification to clients
+    try {
+      await sendPhaseChangeNotification(roomCode, phase);
+      console.log(`[Admin] WebSocket phase change notification sent for room ${roomCode}`);
+    } catch (wsError) {
+      console.error('WebSocket notification failed:', wsError);
+      // Continue anyway - the API call succeeded
+    }
 
-    return NextResponse.json<ApiResponse<null>>({
+    return NextResponse.json<ApiResponse<{ roomCode: string; phase: string; message: string }>>({
       success: true,
       data: {
         roomCode,

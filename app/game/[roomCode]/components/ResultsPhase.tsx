@@ -125,7 +125,13 @@ export default function ResultsPhase({
         },
       });
 
-      if (!response.ok) {
+      if (response.ok) {
+        console.log('[ResultsPhase] Next round started successfully');
+        // 페이지 새로고침하여 다음 라운드로 이동
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      } else {
         console.error('Failed to start next round:', response.status);
       }
     } catch (error) {

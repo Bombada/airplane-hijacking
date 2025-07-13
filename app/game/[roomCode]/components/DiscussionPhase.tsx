@@ -24,13 +24,12 @@ export default function DiscussionPhase({
   myCards,
   currentUserId
 }: DiscussionPhaseProps) {
-  const [timeRemaining, setTimeRemaining] = useState(120); // 2분
-
+  const [timeRemaining, setTimeRemaining] = useState(30); // 30초
   useEffect(() => {
     if (!phaseStartTime) return;
 
     const startTime = new Date(phaseStartTime).getTime();
-    const duration = 120 * 1000; // 2분
+    const duration = 30 * 1000; // 30초
 
     const timer = setInterval(() => {
       const now = Date.now();
@@ -64,7 +63,13 @@ export default function DiscussionPhase({
         }),
       });
 
-      if (!response.ok) {
+      if (response.ok) {
+        console.log('[DiscussionPhase] Phase changed to card_selection successfully');
+        // 페이지 새로고침하여 다음 페이즈로 이동
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      } else {
         console.error('Failed to progress to next phase:', response.status);
       }
     } catch (error) {

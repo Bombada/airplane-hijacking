@@ -6,6 +6,65 @@ import { generatePlayerCards, generateAirplaneNumbers } from '@/lib/game/gameLog
 import { ApiResponse } from '@/types/database';
 import mockGameState from '@/lib/game/mockGameState';
 
+// Function to send phase change notification
+async function sendPhaseChangeNotification(roomCode: string, phase: string) {
+  return new Promise<void>((resolve) => {
+    try {
+      const WebSocket = require('ws');
+      const port = process.env.NEXT_PUBLIC_WS_PORT || '8080';
+      const host = process.env.NEXT_PUBLIC_WS_HOST || 'localhost';
+      const ws = new WebSocket(`ws://${host}:${port}`);
+      
+      const timeout = setTimeout(() => {
+        console.log('[Game Start] WebSocket notification timeout');
+        ws.close();
+        resolve();
+      }, 5000);
+      
+      ws.on('open', () => {
+        console.log(`[Game Start] Sending phase change notification for room ${roomCode}: ${phase}`);
+        
+        // Join the room as admin
+        ws.send(JSON.stringify({
+          type: 'join_room',
+          roomCode: roomCode,
+          userId: 'admin'
+        }));
+        
+        // Send phase change notification after a short delay
+        setTimeout(() => {
+          ws.send(JSON.stringify({
+            type: 'phase_change',
+            phase: phase,
+            roomCode: roomCode
+          }));
+          
+          // Close connection and resolve
+          setTimeout(() => {
+            clearTimeout(timeout);
+            ws.close();
+            resolve();
+          }, 200);
+        }, 200);
+      });
+      
+      ws.on('error', (error: any) => {
+        console.error('WebSocket error in phase change notification:', error);
+        clearTimeout(timeout);
+        resolve(); // Don't fail the API call
+      });
+      
+      ws.on('close', () => {
+        clearTimeout(timeout);
+        resolve();
+      });
+    } catch (error) {
+      console.error('Error creating WebSocket connection:', error);
+      resolve(); // Don't fail the API call
+    }
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { roomCode, userId } = await request.json();
@@ -175,6 +234,15 @@ export async function POST(request: NextRequest) {
         }, { status: 500 });
       }
 
+      // Send WebSocket notification to all players in the room
+      try {
+        await sendPhaseChangeNotification(roomCode, 'airplane_selection');
+        console.log(`[Game Start] WebSocket phase change notification sent for room ${roomCode}`);
+      } catch (wsError) {
+        console.error('WebSocket notification failed:', wsError);
+        // Continue anyway - the API call succeeded
+      }
+
       return NextResponse.json<ApiResponse<any>>({
         data: {
           gameRoom: updatedRoom,
@@ -241,6 +309,15 @@ export async function POST(request: NextRequest) {
         current_phase: 'airplane_selection',
         phase_start_time: new Date().toISOString()
       });
+
+      // Send WebSocket notification for memory mode as well
+      try {
+        await sendPhaseChangeNotification(roomCode, 'airplane_selection');
+        console.log(`[Game Start] WebSocket phase change notification sent for room ${roomCode} (memory mode)`);
+      } catch (wsError) {
+        console.error('WebSocket notification failed (memory mode):', wsError);
+        // Continue anyway - the API call succeeded
+      }
 
       return NextResponse.json<ApiResponse<any>>({
         data: {
