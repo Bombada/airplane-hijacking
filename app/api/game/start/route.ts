@@ -2,7 +2,7 @@ export const runtime = 'edge';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/server';
-import { generatePlayerCards, generateAirplaneNumbers } from '@/lib/game/gameLogic';
+import { generatePlayerCards, generateAirplaneData } from '@/lib/game/gameLogic';
 import { ApiResponse } from '@/types/database';
 import mockGameState from '@/lib/game/mockGameState';
 
@@ -157,29 +157,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Create airplanes for the first round
-      const airplaneNumbers = generateAirplaneNumbers();
-      const airplaneInserts = airplaneNumbers.map(num => {
-        let max_passengers: number;
-        switch (num) {
-          case 1:
-          case 2:
-            max_passengers = 2;
-            break;
-          case 3:
-            max_passengers = 4;
-            break;
-          case 4:
-            max_passengers = 8;
-            break;
-          default:
-            max_passengers = 2;
-        }
-        return {
-          game_round_id: round.id,
-          airplane_number: num,
-          max_passengers: max_passengers
-        };
-      });
+      const airplaneInserts = generateAirplaneData(players.length, round.id);
 
       const { error: airplanesError } = await supabase
         .from('airplanes')
@@ -278,8 +256,8 @@ export async function POST(request: NextRequest) {
       const round = mockGameState.createRound(memoryGameRoom.id, 1);
 
       // Create airplanes
-      const airplaneNumbers = generateAirplaneNumbers();
-      mockGameState.createAirplanes(round.id, airplaneNumbers);
+      const airplaneData = generateAirplaneData(players.length, round.id);
+      mockGameState.createAirplanes(round.id, airplaneData.map(a => a.airplane_number));
 
       // Update game room status
       const updatedRoom = mockGameState.updateGameRoom(roomCode, {

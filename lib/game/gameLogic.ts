@@ -33,8 +33,49 @@ export function shuffleArray<T>(array: T[]): T[] {
 /**
  * 비행기 번호 생성 (1~4번)
  */
-export function generateAirplaneNumbers(): number[] {
-  return [1, 2, 3, 4];
+export function generateAirplaneNumbers(playerCount: number): number[] {
+  if (playerCount <= 2) {
+    return [1, 2];
+  } else if (playerCount <= 4) {
+    return [1, 2];
+  } else if (playerCount <= 6) {
+    return [1, 2, 3];
+  } else {
+    return [1, 2, 3, 4];
+  }
+}
+
+/**
+ * 비행기 번호에 따른 최대 승객 수 반환
+ */
+export function getAirplaneMaxPassengers(airplaneNumber: number): number {
+  switch (airplaneNumber) {
+    case 1:
+    case 2:
+      return 2;
+    case 3:
+      return 4;
+    case 4:
+      return 8;
+    default:
+      return 2;
+  }
+}
+
+/**
+ * 플레이어 수에 따른 비행기 생성 데이터 반환
+ */
+export function generateAirplaneData(playerCount: number, roundId: string): Array<{
+  game_round_id: string;
+  airplane_number: number;
+  max_passengers: number;
+}> {
+  const airplaneNumbers = generateAirplaneNumbers(playerCount);
+  return airplaneNumbers.map(num => ({
+    game_round_id: roundId,
+    airplane_number: num,
+    max_passengers: getAirplaneMaxPassengers(num)
+  }));
 }
 
 /**

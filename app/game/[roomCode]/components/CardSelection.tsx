@@ -252,6 +252,11 @@ export default function CardSelection({
           </p>
         </div>
       )}
+      <AirplanePassengers 
+        airplanes={airplanes}
+        players={players}
+        allPlayerActions={allPlayerActions}
+      />
 
       {/* 카드 선택 버튼들 */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-6xl mx-auto mb-6">
@@ -339,8 +344,7 @@ export default function CardSelection({
             <div>
               <span className="font-bold text-blue-700">승객 카드:</span>
               <p className="text-gray-700 mt-1">
-                함께 탑승한 승객 수 × 2점을 얻습니다. 
-                승객이 많을수록 더 많은 점수를 얻을 수 있습니다.
+                같이 탑승한 승객이 많을수록 더 많은 점수를 얻을 수 있습니다.
               </p>
             </div>
           </div>
@@ -349,8 +353,7 @@ export default function CardSelection({
             <div>
               <span className="font-bold text-green-700">추종자 카드:</span>
               <p className="text-gray-700 mt-1">
-                탑승한 비행기에 하이재커가 있을 경우 7점을 얻습니다.
-                하이재커를 잘 찾아서 함께 탑승하는 것이 중요합니다.
+                하이재커를 추종하는 사람이니 하이재커랑 같이타야 합니다.
               </p>
             </div>
           </div>
@@ -359,8 +362,7 @@ export default function CardSelection({
             <div>
               <span className="font-bold text-red-700">하이재커 카드:</span>
               <p className="text-gray-700 mt-1">
-                함께 탑승한 승객 수 × 3점을 얻습니다. 
-                단, 추종자가 있으면 추종자 수 × 3점이 차감됩니다.
+                지겨운 추종자들을 피해 새로운 승객들을 납치해야 합니다.
               </p>
             </div>
           </div>
@@ -369,8 +371,7 @@ export default function CardSelection({
             <div>
               <span className="font-bold text-purple-700">우는 애기 카드:</span>
               <p className="text-gray-700 mt-1">
-                함께 탑승한 승객 수 × 2점을 얻습니다. 
-                단, 다른 승객들은 각각 1점씩 차감됩니다.
+                같이 타면 최악인 승객입니다. 특히 장시간 비행일 때는요.
               </p>
             </div>
           </div>
@@ -379,8 +380,7 @@ export default function CardSelection({
             <div>
               <span className="font-bold text-pink-700">연인 카드:</span>
               <p className="text-gray-700 mt-1">
-                함께 탑승한 승객 수 × 2점 + 연인 수 × 1점(본인 제외)을 얻습니다.
-                다른 연인과 함께 탑승하면 추가 점수를 얻습니다.
+                지들 끼리만 좋은 승객이죠.
               </p>
             </div>
           </div>
@@ -389,19 +389,14 @@ export default function CardSelection({
             <div>
               <span className="font-bold text-gray-700">모태솔로 카드:</span>
               <p className="text-gray-700 mt-1">
-                함께 탑승한 승객 수 × 3점을 얻습니다. 
-                단, 연인이 있으면 연인 수 × 1점이 차감됩니다.
+                제발 연인만 없어라!
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      <AirplanePassengers 
-        airplanes={airplanes}
-        players={players}
-        allPlayerActions={allPlayerActions}
-      />
+     
     </div>
   );
 } 

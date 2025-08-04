@@ -116,7 +116,8 @@ export function useGameStateWS(roomCode: string, userId: string): UseGameStateWS
         console.log(`[GameStateWS] Fetching updated state...`);
         setTimeout(() => fetchGameState(true), 100);
       } else {
-        console.error('[GameStateWS] Action failed:', response.status);
+        const errorData = await response.text();
+        console.error('[GameStateWS] Action failed:', response.status, errorData);
       }
     } catch (error) {
       console.error('[GameStateWS] Action error:', error);

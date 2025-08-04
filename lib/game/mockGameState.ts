@@ -1,4 +1,6 @@
 // Memory-based game state for real multiplayer functionality
+import { generateAirplaneNumbers, getAirplaneMaxPassengers } from './gameLogic';
+
 interface MockPlayer {
   id: string;
   game_room_id: string;
@@ -152,31 +154,12 @@ class MockGameState {
 
   // Airplane operations
   createAirplanes(roundId: string, airplaneNumbers: number[]): MockAirplane[] {
-    const airplanes: MockAirplane[] = airplaneNumbers.map(num => {
-      // Set max_passengers based on airplane number
-      let max_passengers: number;
-      switch (num) {
-        case 1:
-        case 2:
-          max_passengers = 1;
-          break;
-        case 3:
-          max_passengers = 3;
-          break;
-        case 4:
-          max_passengers = 8;
-          break;
-        default:
-          max_passengers = 1;
-      }
-
-      return {
-        id: `airplane-${Date.now()}-${num}-${Math.random().toString(36).substr(2, 9)}`,
-        game_round_id: roundId,
-        airplane_number: num,
-        max_passengers: max_passengers
-      };
-    });
+    const airplanes: MockAirplane[] = airplaneNumbers.map(num => ({
+      id: `airplane-${Date.now()}-${num}-${Math.random().toString(36).substr(2, 9)}`,
+      game_round_id: roundId,
+      airplane_number: num,
+      max_passengers: getAirplaneMaxPassengers(num)
+    }));
 
     this.airplanes.set(roundId, airplanes);
     return airplanes;
@@ -360,7 +343,11 @@ class MockGameState {
           // Create next round
           const nextRoundNumber = gameRoom.current_round + 1;
           const newRound = this.createRound(gameRoom.id, nextRoundNumber);
-          this.createAirplanes(newRound.id, [1, 2, 3, 4]); // Create airplanes for the new round
+          
+          // Get player count to determine airplane numbers
+          const players = this.getPlayers(gameRoom.id);
+          const airplaneNumbers = generateAirplaneNumbers(players.length);
+          this.createAirplanes(newRound.id, airplaneNumbers); // Create airplanes for the new round
           
           return this.updateGameRoom(roomCode, {
             current_round: nextRoundNumber,

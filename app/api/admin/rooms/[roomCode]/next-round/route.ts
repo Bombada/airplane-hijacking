@@ -3,6 +3,7 @@ export const runtime = 'edge';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/server';
 import { ApiResponse } from '@/types/database';
+import { generateAirplaneData } from '@/lib/game/gameLogic';
 import WebSocket from 'ws';
 
 export async function POST(
@@ -59,13 +60,20 @@ export async function POST(
       }, { status: 500 });
     }
 
-    // Create airplanes for the new round
-    const airplaneInserts = [
-      { game_round_id: newRound.id, airplane_number: 1, max_passengers: 2 },
-      { game_round_id: newRound.id, airplane_number: 2, max_passengers: 2 },
-      { game_round_id: newRound.id, airplane_number: 3, max_passengers: 4 },
-      { game_round_id: newRound.id, airplane_number: 4, max_passengers: 8 }
-    ];
+    // Get players to determine airplane count
+    const { data: players, error: playersError } = await supabase
+      .from('players')
+      .select('*')
+      .eq('game_room_id', gameRoom.id);
+
+    if (playersError || !players) {
+      return NextResponse.json<ApiResponse<null>>({
+        error: 'Failed to get players'
+      }, { status: 500 });
+    }
+
+    // Create airplanes for the new round based on player count
+    const airplaneInserts = generateAirplaneData(players.length, newRound.id);
 
     const { error: airplanesError } = await supabase
       .from('airplanes')

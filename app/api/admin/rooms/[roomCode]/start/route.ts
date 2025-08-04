@@ -2,7 +2,7 @@ export const runtime = 'edge';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/server';
-import { generatePlayerCards } from '@/lib/game/gameLogic';
+import { generatePlayerCards, generateAirplaneData } from '@/lib/game/gameLogic';
 
 interface RouteParams {
   params: { roomCode: string };
@@ -145,14 +145,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Failed to create game round' }, { status: 500 });
     }
 
-    // Create initial airplanes for the round
-    const airplanes = [];
-    for (let i = 1; i <= 4; i++) {
-      airplanes.push({
-        game_round_id: newRound.id,
-        airplane_number: i
-      });
-    }
+    // Create initial airplanes for the round based on player count
+    const airplanes = generateAirplaneData(players.length, newRound.id);
 
     const { error: airplanesError } = await supabase
       .from('airplanes')
