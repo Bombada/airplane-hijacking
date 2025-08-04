@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import AirplanePassengers from './AirplanePassengers';
+import { getPhaseTimeLimit } from '@/lib/game/gameLogic';
 
 interface DiscussionPhaseProps {
   players: any[];
@@ -36,7 +37,7 @@ export default function DiscussionPhase({
     if (!phaseStartTime) return;
 
     const startTime = new Date(phaseStartTime).getTime();
-    const duration = 30 * 1000; // 30초
+    const duration = getPhaseTimeLimit('discussion') * 1000; // Get from gameLogic
 
     const timer = setInterval(() => {
       const now = Date.now();

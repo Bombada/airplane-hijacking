@@ -183,7 +183,7 @@ export function isGameFinished(currentRound: number): boolean {
  * 다음 페이즈 결정
  */
 export function getNextPhase(currentPhase: string): string {
-  const phases = ['waiting', 'airplane_selection', 'discussion', 'card_selection', 'results'];
+  const phases = ['waiting', 'airplane_selection', 'card_selection', 'results'];
   const currentIndex = phases.indexOf(currentPhase);
   
   if (currentIndex === -1 || currentIndex === phases.length - 1) {
@@ -200,10 +200,8 @@ export function getPhaseTimeLimit(phase: string): number {
   switch (phase) {
     case 'airplane_selection':
       return 15;
-    case 'discussion':
-      return 10;
     case 'card_selection':
-      return 15;
+      return 40;
     case 'results':
       return 30;
     default:

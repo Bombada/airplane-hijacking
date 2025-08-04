@@ -344,9 +344,6 @@ class MockGameState {
     
     switch (gameRoom.current_phase) {
       case 'airplane_selection':
-        nextPhase = 'discussion';
-        break;
-      case 'discussion':
         nextPhase = 'card_selection';
         break;
       case 'card_selection':

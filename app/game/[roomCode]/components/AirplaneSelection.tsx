@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { getPhaseTimeLimit } from '@/lib/game/gameLogic';
 
 interface Airplane {
   id: string;
@@ -60,7 +61,7 @@ export default function AirplaneSelection({
     }
 
     const startTime = new Date(phaseStartTime).getTime();
-    const duration = 40 * 1000; // 40 seconds
+    const duration = getPhaseTimeLimit('airplane_selection') * 1000; // Get from gameLogic
     const endTime = startTime + duration;
 
     const timer = setInterval(() => {
@@ -98,7 +99,7 @@ export default function AirplaneSelection({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          phase: 'discussion'
+          phase: 'card_selection'
         }),
       });
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import AirplanePassengers from './AirplanePassengers';
+import { getPhaseTimeLimit } from '@/lib/game/gameLogic';
 
 interface Card {
   id: string;
@@ -39,7 +40,7 @@ export default function CardSelection({
     }
 
     const startTime = new Date(phaseStartTime).getTime();
-    const duration = 40 * 1000; // 15 seconds
+    const duration = getPhaseTimeLimit('card_selection') * 1000; // Get from gameLogic
     const endTime = startTime + duration;
 
     const timer = setInterval(() => {

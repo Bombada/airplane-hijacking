@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import FinalRankings from './FinalRankings';
+import { getPhaseTimeLimit } from '@/lib/game/gameLogic';
 
 interface ResultsPhaseProps {
   roomCode: string;
@@ -90,7 +91,7 @@ export default function ResultsPhase({
     }
 
     const startTime = new Date(phaseStartTime).getTime();
-    const duration = 15 * 1000; // 15 seconds for results phase
+    const duration = getPhaseTimeLimit('results') * 1000; // Get from gameLogic
     const endTime = startTime + duration;
 
     const timer = setInterval(() => {
