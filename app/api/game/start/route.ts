@@ -8,63 +8,39 @@ import mockGameState from '@/lib/game/mockGameState';
 
 // Function to send WebSocket notification for game start
 async function sendGameStartNotification(roomCode: string) {
-  return new Promise<void>((resolve) => {
-    try {
-      const WebSocket = require('ws');
-      const ws = new WebSocket('ws://localhost:8080');
-      
-      const timeout = setTimeout(() => {
-        console.log('[GameStart] WebSocket notification timeout');
-        ws.close();
-        resolve();
-      }, 5000);
-      
-      ws.on('open', () => {
-        console.log(`[GameStart] Sending game start notification for room ${roomCode}`);
-        
-        // Join the room as admin
-        ws.send(JSON.stringify({
-          type: 'join_room',
-          roomCode: roomCode,
-          userId: 'admin'
-        }));
-        
-        // Send game start notification after a short delay
-        setTimeout(() => {
-          ws.send(JSON.stringify({
-            type: 'admin_state_change',
-            roomCode: roomCode,
-            action: 'game_start',
-            details: {
-              phase: 'airplane_selection',
-              round: 1
-            }
-          }));
-          
-          // Close connection and resolve
-          setTimeout(() => {
-            clearTimeout(timeout);
-            ws.close();
-            resolve();
-          }, 200);
-        }, 200);
-      });
-      
-      ws.on('error', (error: any) => {
-        console.error('WebSocket error in game start notification:', error);
-        clearTimeout(timeout);
-        resolve(); // Don't fail the API call
-      });
-      
-      ws.on('close', () => {
-        clearTimeout(timeout);
-        resolve();
-      });
-    } catch (error) {
-      console.error('Error creating WebSocket connection:', error);
-      resolve(); // Don't fail the API call
+  try {
+    // Edge runtime에서는 Node.js WebSocket을 사용할 수 없으므로 
+    // HTTP API를 통해 WebSocket 서버에 알림을 보냅니다
+    console.log(`[GameStart] Sending game start notification for room ${roomCode} via HTTP`);
+    
+    // Cloudflare Workers WebSocket 서버에 HTTP 요청으로 알림 전송
+    const response = await fetch('https://airplane-hijacking-websocket-v2.affectome22.workers.dev/notify', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        type: 'admin_state_change',
+        roomCode: roomCode,
+        action: 'game_start',
+        details: {
+          phase: 'airplane_selection',
+          round: 1
+        }
+      })
+    });
+    
+    if (response.ok) {
+      const result = await response.json();
+      console.log(`[GameStart] Successfully sent game start notification for room ${roomCode}:`, result);
+    } else {
+      const errorText = await response.text();
+      console.error(`[GameStart] Failed to send notification: ${response.status} - ${errorText}`);
     }
-  });
+  } catch (error) {
+    console.error('[GameStart] Error sending HTTP notification:', error);
+    // Don't fail the API call
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -238,7 +214,9 @@ export async function POST(request: NextRequest) {
 
       // Send WebSocket notification to all players in the room
       try {
+        console.log(`[GameStart] Attempting to send WebSocket notification for room ${roomCode}`);
         await sendGameStartNotification(roomCode);
+        console.log(`[GameStart] WebSocket notification sent for room ${roomCode}`);
       } catch (error) {
         console.error('Failed to send WebSocket notification:', error);
         // Don't fail the API request if WebSocket fails
@@ -313,7 +291,9 @@ export async function POST(request: NextRequest) {
 
       // Send WebSocket notification to all players in the room
       try {
+        console.log(`[GameStart Memory] Attempting to send WebSocket notification for room ${roomCode}`);
         await sendGameStartNotification(roomCode);
+        console.log(`[GameStart Memory] WebSocket notification sent for room ${roomCode}`);
       } catch (error) {
         console.error('Failed to send WebSocket notification:', error);
         // Don't fail the API request if WebSocket fails

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React from 'react';
 
 interface Player {
   id: string;
@@ -14,79 +14,16 @@ interface PlayerListProps {
   players: Player[];
   currentUserId: string;
   onToggleReady: () => void;
-  autoStartTime?: string;
   roomCode: string;
 }
 
-export default function PlayerList({ players, currentUserId, onToggleReady, autoStartTime, roomCode }: PlayerListProps) {
+export default function PlayerList({ players, currentUserId, onToggleReady, roomCode }: PlayerListProps) {
   const currentPlayer = players.find(p => p.user_id === currentUserId);
-  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   
   // 게임 시작 조건 체크
   const hasMinPlayers = players.length >= 2;
   const allPlayersReady = players.every(p => p.is_ready);
   const canStartGame = hasMinPlayers && allPlayersReady;
-
-  // 자동 시작 타이머 (DiscussionPhase와 동일한 방식)
-  useEffect(() => {
-    if (!autoStartTime) {
-      setTimeRemaining(null);
-      return;
-    }
-
-    const startTime = new Date(autoStartTime).getTime();
-    const duration = 5 * 1000; // 5초
-
-    const timer = setInterval(() => {
-      const now = Date.now();
-      const elapsed = now - startTime;
-      const remaining = Math.max(0, Math.floor((duration - elapsed) / 1000));
-      
-      setTimeRemaining(remaining);
-
-      if (remaining === 0) {
-        clearInterval(timer);
-        // 타이머 종료 시 게임 시작 API 호출
-        handleAutoStart();
-      }
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [autoStartTime]);
-
-  const handleAutoStart = async () => {
-    try {
-      // Get the current server port from the window location
-      const port = window.location.port;
-      const baseUrl = port ? `http://localhost:${port}` : window.location.origin;
-      
-      const response = await fetch(`${baseUrl}/api/admin/rooms/${roomCode}/start`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        console.log('게임이 자동으로 시작되었습니다.');
-      } else {
-        console.error('게임 시작 실패:', response.status);
-      }
-    } catch (error) {
-      console.error('게임 시작 중 오류 발생:', error);
-    }
-  };
-
-  const formatTime = (seconds: number) => {
-    return `${seconds}초`;
-  };
-
-  const getTimerColor = () => {
-    if (timeRemaining === null) return 'text-gray-600';
-    if (timeRemaining > 3) return 'text-green-600';
-    if (timeRemaining > 1) return 'text-yellow-600';
-    return 'text-red-600';
-  };
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
@@ -162,16 +99,7 @@ export default function PlayerList({ players, currentUserId, onToggleReady, auto
           {canStartGame ? (
             <>
               <strong>🎉 게임 시작 준비 완료!</strong>
-              {timeRemaining !== null && timeRemaining > 0 ? (
-                <span className="block mt-2">
-                  <span className={`text-2xl font-bold ${getTimerColor()}`}>
-                    {formatTime(timeRemaining)}
-                  </span>
-                  <span className="text-xs block">후 자동으로 게임이 시작됩니다.</span>
-                </span>
-              ) : (
-                <span className="block mt-1">곧 게임이 시작됩니다!</span>
-              )}
+              <span className="block mt-1">모든 플레이어가 준비되었습니다!</span>
             </>
           ) : (
             <>

@@ -13,7 +13,6 @@ interface GameState {
   myActions?: any[];
   allPlayerActions?: any[];
   hasActiveTimer?: boolean;
-  autoStartTime?: string;
 }
 
 interface UseGameStateWSResult {
@@ -22,22 +21,13 @@ interface UseGameStateWSResult {
   error: string | null;
   isConnected: boolean;
   sendAction: (actionType: string, airplaneId?: string, cardId?: string) => void;
-  sendCountdownMessage: (type: string, countdown?: number) => void;
   refetch: () => Promise<void>;
-  countdownState: {
-    active: boolean;
-    countdown: number | null;
-  };
 }
 
 export function useGameStateWS(roomCode: string, userId: string): UseGameStateWSResult {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [countdownState, setCountdownState] = useState({
-    active: false,
-    countdown: null as number | null
-  });
   const [lastRound, setLastRound] = useState<number | null>(null);
   const [lastGameStatus, setLastGameStatus] = useState<string | null>(null);
   
@@ -133,17 +123,7 @@ export function useGameStateWS(roomCode: string, userId: string): UseGameStateWS
     }
   };
 
-  // Send countdown message via WebSocket
-  const sendCountdownMessage = (type: string, countdown?: number) => {
-    if (!isConnected) return;
-    
-    const wsMessage = {
-      type,
-      countdown
-    };
-    console.log(`[GameStateWS] Sending countdown message:`, wsMessage);
-    sendMessage(wsMessage);
-  };
+
 
   // Handle WebSocket messages
   useEffect(() => {
@@ -222,8 +202,10 @@ export function useGameStateWS(roomCode: string, userId: string): UseGameStateWS
         if (lastMessage.action === 'game_start') {
           console.log('[GameStateWS] Game start detected, forcing page reload');
           setTimeout(() => {
-            window.location.reload();
-          }, 1000);
+            // 캐시 무효화를 위해 timestamp 추가
+            const timestamp = new Date().getTime();
+            window.location.href = `${window.location.pathname}?t=${timestamp}`;
+          }, 200);
         } else if (lastMessage.action === 'next_round') {
           console.log('[GameStateWS] Next round detected, forcing page reload');
           setTimeout(() => {
@@ -238,23 +220,7 @@ export function useGameStateWS(roomCode: string, userId: string): UseGameStateWS
         }
         break;
 
-      case 'countdown_start':
-        console.log('[GameStateWS] Countdown started');
-        setCountdownState({
-          active: true,
-          countdown: lastMessage.countdown || 5
-        });
-        break;
 
-      case 'countdown_update':
-        console.log('[GameStateWS] Countdown update:', lastMessage.countdown);
-        if (lastMessage.countdown !== undefined) {
-          setCountdownState(prev => ({
-            ...prev,
-            countdown: lastMessage.countdown
-          }));
-        }
-        break;
     }
   }, [lastMessage]);
 
@@ -273,6 +239,23 @@ export function useGameStateWS(roomCode: string, userId: string): UseGameStateWS
       fetchGameState();
     }
   }, [isConnected, userId]);
+
+  // 연결이 끊어졌다가 다시 연결될 때 게임 상태 확인
+  useEffect(() => {
+    if (isConnected && gameState && userId) {
+      // 게임이 시작되었는데 아직 waiting 상태라면 새로고침
+      const shouldReload = 
+        gameState.gameRoom?.current_phase === 'waiting' && 
+        gameState.gameRoom?.status === 'playing';
+        
+      if (shouldReload) {
+        console.log('[GameStateWS] Game status is playing but phase is waiting, forcing reload');
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      }
+    }
+  }, [isConnected, gameState]);
 
   // Monitor round changes and force refresh
   useEffect(() => {
@@ -316,8 +299,6 @@ export function useGameStateWS(roomCode: string, userId: string): UseGameStateWS
     error,
     isConnected,
     sendAction,
-    sendCountdownMessage,
-    refetch: fetchGameState,
-    countdownState
+    refetch: fetchGameState
   };
 } 

@@ -94,59 +94,30 @@ export async function POST(
       }, { status: 500 });
     }
 
-    // Notify players via WebSocket
+    // Notify players via HTTP
     try {
-      const WebSocket = require('ws');
-      const port = process.env.NEXT_PUBLIC_WS_PORT || '8080';
-      const host = process.env.NEXT_PUBLIC_WS_HOST || 'localhost';
-      const ws = new WebSocket(`ws://${host}:${port}`);
+      console.log(`[Admin] Sending next round notification for room ${roomCode}: Round ${nextRound} via HTTP`);
       
-      const timeout = setTimeout(() => {
-        console.log('[Admin] WebSocket notification timeout');
-        ws.close();
-      }, 5000);
-      
-      ws.on('open', () => {
-        console.log(`[Admin] Sending next round notification for room ${roomCode}: Round ${nextRound}`);
-        
-        // Join the room as admin
-        ws.send(JSON.stringify({
-          type: 'join_room',
+      // Send notification to Cloudflare Workers WebSocket server via HTTP
+      await fetch('https://airplane-hijacking-websocket-v2.affectome22.workers.dev/notify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'admin_state_change',
           roomCode: roomCode,
-          userId: 'admin'
-        }));
-        
-        // Send admin state change notification after a short delay
-        setTimeout(() => {
-          ws.send(JSON.stringify({
-            type: 'admin_state_change',
-            roomCode: roomCode,
-            action: 'next_round',
-            details: {
-              newRound: nextRound,
-              phase: 'airplane_selection'
-            }
-          }));
-          
-          // Close connection
-          setTimeout(() => {
-            clearTimeout(timeout);
-            ws.close();
-          }, 200);
-        }, 200);
+          action: 'next_round',
+          details: {
+            newRound: nextRound,
+            phase: 'airplane_selection'
+          }
+        })
       });
       
-      ws.on('error', (error: any) => {
-        console.error('WebSocket error in next round notification:', error);
-        clearTimeout(timeout);
-        // Don't throw error, just log it
-      });
-      
-      ws.on('close', () => {
-        clearTimeout(timeout);
-      });
+      console.log(`[Admin] Successfully sent next round notification for room ${roomCode}`);
     } catch (wsError) {
-      console.error('WebSocket notification failed:', wsError);
+      console.error('HTTP notification failed:', wsError);
       // Continue anyway - the API call succeeded
     }
 

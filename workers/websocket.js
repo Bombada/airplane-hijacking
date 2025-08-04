@@ -17,12 +17,49 @@ export class WebSocketDurableObject {
 
   async fetch(request) {
     try {
+      const url = new URL(request.url);
+      
+      // Handle HTTP notification requests
+      if (url.pathname === '/notify' && request.method === 'POST') {
+        const data = await request.json();
+        console.log(`Durable Object received notification for room ${this.roomCode || data.roomCode}:`, data);
+        console.log(`Current active sessions: ${this.sessions.size}`);
+        
+        // Set room code if not already set
+        if (!this.roomCode && data.roomCode) {
+          this.roomCode = data.roomCode;
+        }
+        
+        // Handle different types of notifications
+        switch (data.type) {
+          case 'admin_state_change':
+            this.handleAdminStateChange(null, data);
+            break;
+          case 'phase_change':
+            this.handlePhaseChange(null, data);
+            break;
+          case 'game_finished':
+            this.handleGameFinished(null, data);
+            break;
+          default:
+            console.log('Unknown notification type:', data.type);
+        }
+        
+        return new Response(JSON.stringify({ 
+          success: true, 
+          activeSessions: this.sessions.size,
+          roomCode: this.roomCode 
+        }), {
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      
+      // Handle WebSocket upgrade
       const webSocketPair = new WebSocketPair();
       const [client, server] = Object.values(webSocketPair);
 
       server.accept();
       
-      const url = new URL(request.url);
       const roomCode = url.searchParams.get('roomCode');
       
       if (!roomCode) {
@@ -224,14 +261,24 @@ export class WebSocketDurableObject {
 
   broadcastToAll(message) {
     const messageStr = JSON.stringify(message);
+    console.log(`Broadcasting to ${this.sessions.size} clients in room ${this.roomCode}:`, message);
+    
+    let successCount = 0;
+    let errorCount = 0;
+    
     this.sessions.forEach((webSocket, userId) => {
       try {
         webSocket.send(messageStr);
+        successCount++;
+        console.log(`Successfully sent message to ${userId}`);
       } catch (error) {
         console.error(`Error sending to ${userId}:`, error);
         this.sessions.delete(userId);
+        errorCount++;
       }
     });
+    
+    console.log(`Broadcast complete: ${successCount} success, ${errorCount} errors`);
   }
 
   broadcastToOthers(excludeUserId, message) {
@@ -261,6 +308,47 @@ async function handleRequest(request, env, ctx) {
     }), {
       headers: { 'Content-Type': 'application/json' }
     });
+  }
+  
+  // HTTP notification endpoint for admin actions
+  if (url.pathname === '/notify' && request.method === 'POST') {
+    try {
+      const data = await request.json();
+      console.log('Received HTTP notification:', data);
+      
+      if (!data.roomCode) {
+        return new Response('Room code is required', { status: 400 });
+      }
+      
+      // Get Durable Object for the room
+      const durableObjectId = env.WEBSOCKET_DURABLE_OBJECT.idFromName(data.roomCode);
+      const durableObject = env.WEBSOCKET_DURABLE_OBJECT.get(durableObjectId);
+      
+      // Forward the notification to the Durable Object
+      const notifyRequest = new Request('https://dummy.com/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      
+      await durableObject.fetch(notifyRequest);
+      
+      return new Response(JSON.stringify({
+        success: true,
+        message: `Notification sent to room ${data.roomCode}`
+      }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      console.error('Error handling notification:', error);
+      return new Response(JSON.stringify({
+        success: false,
+        error: error.message
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
   }
   
   // WebSocket upgrade

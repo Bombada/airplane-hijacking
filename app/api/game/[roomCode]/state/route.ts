@@ -58,35 +58,7 @@ export async function GET(
         }, { status: 404 });
       }
 
-      // 자동 시작 타이머 확인
-      let autoStartTime = null;
-      if (gameRoom.current_phase === 'waiting') {
-        const hasMinPlayers = players.length >= 2;
-        const allPlayersReady = players.every((p: any) => p.is_ready);
-        
-        if (hasMinPlayers && allPlayersReady) {
-          // 모든 플레이어가 준비완료인 경우, 자동 시작 시간 설정
-          if (!gameRoom.phase_start_time) {
-            // 자동 시작 시간이 설정되지 않은 경우 설정
-            const startTime = new Date().toISOString();
-            await supabase
-              .from('game_rooms')
-              .update({ phase_start_time: startTime })
-              .eq('id', gameRoom.id);
-            autoStartTime = startTime;
-          } else {
-            autoStartTime = gameRoom.phase_start_time;
-          }
-        } else {
-          // 조건이 맞지 않으면 자동 시작 시간 제거
-          if (gameRoom.phase_start_time) {
-            await supabase
-              .from('game_rooms')
-              .update({ phase_start_time: null })
-              .eq('id', gameRoom.id);
-          }
-        }
-      }
+
 
       let currentRound = null;
       let airplanes = null;
@@ -186,11 +158,10 @@ export async function GET(
         airplanes: airplanes?.length,
         myCards: myCards?.length,
         myActions: myActions?.length,
-        allPlayerActions: allPlayerActions?.length,
-        autoStartTime
+        allPlayerActions: allPlayerActions?.length
       });
 
-      return NextResponse.json<ApiResponse<any>>({
+      const response = NextResponse.json<ApiResponse<any>>({
         data: {
           gameRoom,
           players,
@@ -200,10 +171,16 @@ export async function GET(
           myCards,
           myActions,
           allPlayerActions,
-          autoStartTime,
           hasActiveTimer: mockGameState.hasActiveTimer(roomCode)
         }
       });
+      
+      // 캐시 무효화 헤더 추가
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+      response.headers.set('Pragma', 'no-cache');
+      response.headers.set('Expires', '0');
+      
+      return response;
 
     } catch (supabaseError) {
       console.error('Supabase operation failed, using memory-based game state:', supabaseError);
@@ -225,29 +202,7 @@ export async function GET(
         }, { status: 404 });
       }
 
-      // 자동 시작 타이머 확인 (메모리 모드)
-      let autoStartTime = null;
-      if (memoryGameRoom.current_phase === 'waiting') {
-        const hasMinPlayers = players.length >= 2;
-        const allPlayersReady = players.every((p: any) => p.is_ready);
-        
-        if (hasMinPlayers && allPlayersReady) {
-          // 모든 플레이어가 준비완료인 경우, 자동 시작 시간 설정
-          if (!memoryGameRoom.phase_start_time) {
-            // 자동 시작 시간이 설정되지 않은 경우 설정
-            const startTime = new Date().toISOString();
-            memoryGameRoom.phase_start_time = startTime;
-            autoStartTime = startTime;
-          } else {
-            autoStartTime = memoryGameRoom.phase_start_time;
-          }
-        } else {
-          // 조건이 맞지 않으면 자동 시작 시간 제거
-          if (memoryGameRoom.phase_start_time) {
-            memoryGameRoom.phase_start_time = undefined;
-          }
-        }
-      }
+
 
       let currentRound = null;
       let airplanes = null;
@@ -285,11 +240,10 @@ export async function GET(
         airplanes: airplanes?.length,
         myCards: myCards?.length,
         myActions: myActions?.length,
-        allPlayerActions: allPlayerActions?.length,
-        autoStartTime
+        allPlayerActions: allPlayerActions?.length
       });
 
-      return NextResponse.json<ApiResponse<any>>({
+      const response = NextResponse.json<ApiResponse<any>>({
         data: {
           gameRoom: memoryGameRoom,
           players,
@@ -299,11 +253,17 @@ export async function GET(
           myCards,
           myActions,
           allPlayerActions,
-          autoStartTime,
           hasActiveTimer: mockGameState.hasActiveTimer(roomCode)
         },
         message: 'Game state retrieved (memory mode - real multiplayer)'
       });
+      
+      // 캐시 무효화 헤더 추가
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+      response.headers.set('Pragma', 'no-cache');
+      response.headers.set('Expires', '0');
+      
+      return response;
     }
 
   } catch (error) {

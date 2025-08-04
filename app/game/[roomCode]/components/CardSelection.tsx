@@ -221,13 +221,13 @@ export default function CardSelection({
           <div className={`text-4xl font-bold ${getTimerColor()} mb-2`}>
             {formatTime(timeRemaining)}
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-3 max-w-md mx-auto">
+          <div className="w-full bg-gray-200 rounded-full h-4 max-w-2xl mx-auto">
             <div 
-              className={`h-3 rounded-full transition-all duration-1000 ${
+              className={`h-4 rounded-full transition-all duration-1000 ${
                 timeRemaining > 10000 ? 'bg-green-500' : 
                 timeRemaining > 5000 ? 'bg-yellow-500' : 'bg-red-500'
               }`}
-              style={{ width: `${(timeRemaining / 15000) * 100}%` }}
+              style={{ width: `${(timeRemaining / 40000) * 100}%` }}
             ></div>
           </div>
           <p className="text-sm text-gray-600 mt-2">

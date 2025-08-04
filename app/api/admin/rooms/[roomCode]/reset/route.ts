@@ -7,61 +7,37 @@ interface RouteParams {
   params: { roomCode: string };
 }
 
-// Function to send WebSocket notification directly
+// Function to send admin state change notification via HTTP
 async function sendAdminStateChangeNotification(roomCode: string, action: string, details?: any) {
   return new Promise<void>((resolve) => {
     try {
-      const WebSocket = require('ws');
-      const port = process.env.NEXT_PUBLIC_WS_PORT || '8080';
-      const host = process.env.NEXT_PUBLIC_WS_HOST || 'localhost';
-      const ws = new WebSocket(`ws://${host}:${port}`);
+      console.log(`[Admin] Sending admin state change notification for room ${roomCode}: ${action} via HTTP`);
       
-      const timeout = setTimeout(() => {
-        console.log('[Admin] WebSocket notification timeout');
-        ws.close();
-        resolve();
-      }, 5000);
-      
-      ws.on('open', () => {
-        console.log(`[Admin] Sending admin state change notification for room ${roomCode}: ${action}`);
-        
-        // Join the room as admin
-        ws.send(JSON.stringify({
-          type: 'join_room',
+      // Send notification to Cloudflare Workers WebSocket server via HTTP
+      fetch('https://airplane-hijacking-websocket-v2.affectome22.workers.dev/notify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'admin_state_change',
           roomCode: roomCode,
-          userId: 'admin'
-        }));
-        
-        // Send admin state change notification after a short delay
-        setTimeout(() => {
-          ws.send(JSON.stringify({
-            type: 'admin_state_change',
-            roomCode: roomCode,
-            action: action,
-            details: details
-          }));
-          
-          // Close connection and resolve
-          setTimeout(() => {
-            clearTimeout(timeout);
-            ws.close();
-            resolve();
-          }, 200);
-        }, 200);
-      });
-      
-      ws.on('error', (error: any) => {
-        console.error('WebSocket error in admin state change notification:', error);
-        clearTimeout(timeout);
+          action: action,
+          details: details
+        })
+      }).then(response => {
+        if (response.ok) {
+          console.log(`[Admin] Successfully sent admin state change notification for room ${roomCode}`);
+        } else {
+          console.error(`[Admin] Failed to send notification: ${response.status}`);
+        }
+        resolve();
+      }).catch(error => {
+        console.error('[Admin] Error sending HTTP notification:', error);
         resolve(); // Don't fail the API call
       });
-      
-      ws.on('close', () => {
-        clearTimeout(timeout);
-        resolve();
-      });
     } catch (error) {
-      console.error('Error creating WebSocket connection:', error);
+      console.error('[Admin] Error in sendAdminStateChangeNotification:', error);
       resolve(); // Don't fail the API call
     }
   });

@@ -4,60 +4,36 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/server';
 import { ApiResponse } from '@/types/database';
 
-// Function to send WebSocket notification directly
+// Function to send game finished notification via HTTP
 async function sendGameFinishedNotification(roomCode: string) {
   return new Promise<void>((resolve) => {
     try {
-      const WebSocket = require('ws');
-      const port = process.env.NEXT_PUBLIC_WS_PORT || '8080';
-      const host = process.env.NEXT_PUBLIC_WS_HOST || 'localhost';
-      const ws = new WebSocket(`ws://${host}:${port}`);
+      console.log(`[Admin] Sending game finished notification for room ${roomCode} via HTTP`);
       
-      const timeout = setTimeout(() => {
-        console.log('[Admin] WebSocket notification timeout');
-        ws.close();
-        resolve();
-      }, 5000);
-      
-      ws.on('open', () => {
-        console.log(`[Admin] Sending game finished notification for room ${roomCode}`);
-        
-        // Join the room as admin
-        ws.send(JSON.stringify({
-          type: 'join_room',
+      // Send notification to Cloudflare Workers WebSocket server via HTTP
+      fetch('https://airplane-hijacking-websocket-v2.affectome22.workers.dev/notify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'game_finished',
           roomCode: roomCode,
-          userId: 'admin'
-        }));
-        
-        // Send game finished notification after a short delay
-        setTimeout(() => {
-          ws.send(JSON.stringify({
-            type: 'game_finished',
-            roomCode: roomCode,
-            message: 'Game has been finished by admin'
-          }));
-          
-          // Close connection and resolve
-          setTimeout(() => {
-            clearTimeout(timeout);
-            ws.close();
-            resolve();
-          }, 200);
-        }, 200);
-      });
-      
-      ws.on('error', (error: any) => {
-        console.error('WebSocket error in game finished notification:', error);
-        clearTimeout(timeout);
+          message: 'Game has been finished by admin'
+        })
+      }).then(response => {
+        if (response.ok) {
+          console.log(`[Admin] Successfully sent game finished notification for room ${roomCode}`);
+        } else {
+          console.error(`[Admin] Failed to send notification: ${response.status}`);
+        }
+        resolve();
+      }).catch(error => {
+        console.error('[Admin] Error sending HTTP notification:', error);
         resolve(); // Don't fail the API call
       });
-      
-      ws.on('close', () => {
-        clearTimeout(timeout);
-        resolve();
-      });
     } catch (error) {
-      console.error('Error creating WebSocket connection:', error);
+      console.error('[Admin] Error in sendGameFinishedNotification:', error);
       resolve(); // Don't fail the API call
     }
   });
