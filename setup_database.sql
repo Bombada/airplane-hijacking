@@ -62,7 +62,7 @@ CREATE TABLE airplanes (
 CREATE TABLE player_cards (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
-  card_type VARCHAR(20) NOT NULL CHECK (card_type IN ('passenger', 'follower', 'hijacker')),
+  card_type VARCHAR(20) NOT NULL CHECK (card_type IN ('passenger', 'follower', 'hijacker', 'baby', 'couple', 'single')),
   is_used BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -150,3 +150,29 @@ ALTER PUBLICATION supabase_realtime ADD TABLE airplanes;
 ALTER PUBLICATION supabase_realtime ADD TABLE player_cards;
 ALTER PUBLICATION supabase_realtime ADD TABLE player_actions;
 ALTER PUBLICATION supabase_realtime ADD TABLE round_results; 
+
+-- Update Card Types Migration Script
+-- Drop existing check constraint on player_cards.card_type
+ALTER TABLE player_cards DROP CONSTRAINT IF EXISTS player_cards_card_type_check;
+
+-- Add new check constraint with expanded card types  
+ALTER TABLE player_cards ADD CONSTRAINT player_cards_card_type_check 
+CHECK (card_type IN ('passenger', 'follower', 'hijacker', 'baby', 'couple', 'single'));
+
+-- Update the comment for clarity
+COMMENT ON COLUMN player_cards.card_type IS 'Card type: passenger, follower, hijacker, baby, couple, single';
+
+-- Show confirmation
+SELECT 'Card types updated successfully' AS message; 
+
+-- Add action_type column to player_actions table
+-- This column is required for tracking different types of player actions
+
+ALTER TABLE player_actions 
+ADD COLUMN IF NOT EXISTS action_type VARCHAR(20) CHECK (action_type IN ('select_airplane', 'select_card'));
+
+-- Update the comment for the table
+COMMENT ON COLUMN player_actions.action_type IS 'Type of action: select_airplane or select_card';
+
+-- Show confirmation
+SELECT 'action_type column added successfully' AS message; 

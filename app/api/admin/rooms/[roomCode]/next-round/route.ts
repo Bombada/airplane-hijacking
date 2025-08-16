@@ -67,15 +67,44 @@ export async function POST(
       { game_round_id: newRound.id, airplane_number: 4, max_passengers: 8 }
     ];
 
+    // Use UPSERT to handle potential duplicates safely
     const { error: airplanesError } = await supabase
       .from('airplanes')
-      .insert(airplaneInserts);
+      .upsert(airplaneInserts, {
+        onConflict: 'game_round_id,airplane_number',
+        ignoreDuplicates: false
+      });
 
     if (airplanesError) {
       console.error('Failed to create airplanes for new round:', airplanesError);
-      return NextResponse.json<ApiResponse<null>>({
-        error: 'Failed to create airplanes for new round'
-      }, { status: 500 });
+      
+      // Try alternative approach: insert one by one with error handling
+      console.log('[NextRound] Trying individual airplane inserts...');
+      let insertedCount = 0;
+      for (const airplane of airplaneInserts) {
+        const { error: singleError } = await supabase
+          .from('airplanes')
+          .upsert(airplane, {
+            onConflict: 'game_round_id,airplane_number',
+            ignoreDuplicates: false
+          });
+        
+        if (!singleError) {
+          insertedCount++;
+        } else {
+          console.error(`[NextRound] Failed to insert airplane ${airplane.airplane_number}:`, singleError);
+        }
+      }
+      
+      if (insertedCount === 0) {
+        return NextResponse.json<ApiResponse<null>>({
+          error: 'Failed to create airplanes for new round'
+        }, { status: 500 });
+      } else {
+        console.log(`[NextRound] Successfully inserted ${insertedCount}/${airplaneInserts.length} airplanes`);
+      }
+    } else {
+      console.log('[NextRound] Airplanes created successfully');
     }
 
     // Update game room
